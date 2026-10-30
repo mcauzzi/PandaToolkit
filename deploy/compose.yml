@@ -1,0 +1,15 @@
+# Stack Komodo "pandatoolkit".
+# Variabile opzionale nell'Environment dello stack:
+#   PORT  porta sull'host del NAS (default 8090), quella a cui punta il reverse proxy
+services:
+  pandatoolkit:
+    image: ghcr.io/mcauzzi/pandatoolkit:latest
+    container_name: pandatoolkit
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8090}:80"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
