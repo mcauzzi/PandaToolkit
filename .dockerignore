@@ -1,7 +1,9 @@
 .git
 .github
-deploy
 Dockerfile
 .dockerignore
 .nojekyll
 README.md
+# di deploy/ serve solo nginx.conf (copiato in /etc/nginx), il compose resta fuori
+deploy/*
+!deploy/nginx.conf
