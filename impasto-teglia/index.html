@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Impasto in teglia · PandaToolkit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: scheda di lavoro a due colonne, parametri a sinistra e ricetta calcolata a destra (sticky), una colonna su telefono */
+:root{
+  --bg:#f3f5f0; --surface:#ffffff; --sunk:#e8ece3; --line:#d3d9cc;
+  --fg:#1d231b; --muted:#5d6858; --accent:#3f7d3a; --accent-ink:#ffffff; --accent-soft:#dfeedb;
+  --warn:#a3561a; --warn-soft:#f7e6d6;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
+  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
+  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
+  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
+  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(48px,env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.back{font-size:13px;color:var(--muted);text-decoration:none}
+.back:hover{color:var(--accent)}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,6vw,46px);line-height:1;margin:0;letter-spacing:-.02em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-family:var(--f-display);font-weight:700;font-size:19px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 small{font-family:var(--f-num);font-weight:400;font-size:12px;color:var(--muted)}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12.5px;color:var(--muted);font-weight:500}
+.inp{display:flex;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font-family:var(--f-num);font-size:15px;padding:8px 10px;outline:none}
+.inp span{font-family:var(--f-num);font-size:12px;color:var(--muted);padding-right:10px}
+select{appearance:auto}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--sunk);color:var(--fg);border-radius:999px;padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip:focus-visible,.btn:focus-visible,.x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pan{display:grid;grid-template-columns:110px 1fr 1fr 74px 34px;gap:8px;align-items:end}
+.pan .field label{font-size:11.5px}
+@media (max-width:520px){.pan{grid-template-columns:1fr 1fr;}.pan .shape{grid-column:1/-1}.pan .x{justify-self:end}}
+.pans{display:flex;flex-direction:column;gap:12px}
+.pans .pan+.pan{padding-top:12px;border-top:1px dashed var(--line)}
+.btn{border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;align-self:flex-start}
+.x{width:34px;height:38px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+.x:hover{color:var(--warn);border-color:var(--warn)}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:600 13px var(--f-body);padding:7px 8px;border-radius:6px;cursor:pointer;min-width:max-content}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.phase{display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:center}
+.phase .name{font-weight:600;font-size:14px}
+.phase .name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+@media (max-width:420px){.phase{grid-template-columns:1fr 1fr}.phase .name{grid-column:1/-1}}
+
+/* risultati */
+.result{position:sticky;top:16px}
+@media (max-width:880px){.result{position:static}}
+.total{background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.total .big span{font-size:20px;font-weight:600}
+.total .meta{font-family:var(--f-num);font-size:12px;opacity:.85;text-align:right}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td,th{padding:7px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:400}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--f-num)}
+td.p{text-align:right;font-family:var(--f-num);color:var(--muted);font-size:12.5px;width:64px}
+tr.sum td{font-weight:600;border-bottom:0}
+.tblwrap{overflow-x:auto}
+.phasehead{font-family:var(--f-display);font-weight:700;font-size:15px;margin:6px 0 0;color:var(--accent)}
+.warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.tl li:last-child{border-bottom:0}
+.tl .t{font-family:var(--f-num);font-size:13px;font-variant-numeric:tabular-nums}
+.tl .t small{display:block;color:var(--muted);font-size:11px}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px}
+.kv b{font-family:var(--f-num);font-weight:600}
+footer{color:var(--muted);font-size:12.5px;max-width:75ch}
+@media (prefers-reduced-motion:no-preference){.chip,.seg button{transition:background .15s,color .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← PandaToolkit</a>
+  <header>
+    <h1>Impasto in teglia</h1>
+    <p>Dimensioni delle teglie, stile e tempi di lievitazione: la ricetta si ricalcola mentre scrivi. Tutte le percentuali sono sul peso della farina.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2>Teglie <small id="areaTot"></small></h2>
+        <div class="pans" id="pans"></div>
+        <button class="btn" id="addPan" type="button">+ Aggiungi teglia</button>
+      </section>
+
+      <section class="card">
+        <h2>Stile e ricetta</h2>
+        <div class="chips" id="presets"></div>
+        <div class="fields">
+          <div class="field"><label for="load">Carico</label><div class="inp"><input id="load" type="number" step="0.01" min="0.2" max="1.2"><span>g/cm²</span></div></div>
+          <div class="field"><label for="hyd">Idratazione</label><div class="inp"><input id="hyd" type="number" step="1" min="50" max="100"><span>%</span></div></div>
+          <div class="field"><label for="salt">Sale</label><div class="inp"><input id="salt" type="number" step="0.1" min="0" max="4"><span>%</span></div></div>
+          <div class="field"><label for="oil">Olio EVO</label><div class="inp"><input id="oil" type="number" step="0.5" min="0" max="10"><span>%</span></div></div>
+          <div class="field"><label for="malt">Malto / zucchero</label><div class="inp"><input id="malt" type="number" step="0.5" min="0" max="5"><span>%</span></div></div>
+          <div class="field"><label for="waste">Scarto</label><div class="inp"><input id="waste" type="number" step="1" min="0" max="15"><span>%</span></div></div>
+        </div>
+        <p class="hint">Lo scarto compensa l'impasto che resta su ciotola, mani e spatola. Il carico è il peso di impasto per cm² di teglia.</p>
+      </section>
+
+      <section class="card">
+        <h2>Lievito e tempi</h2>
+        <div class="seg" id="yeastType" role="group" aria-label="Tipo di lievito">
+          <button type="button" data-v="fresh">Fresco</button>
+          <button type="button" data-v="dry">Secco attivo</button>
+          <button type="button" data-v="lm">Lievito madre</button>
+        </div>
+        <div class="fields" id="lmFields">
+          <div class="field"><label for="lmPct">Lievito madre</label><div class="inp"><input id="lmPct" type="number" step="1" min="5" max="50"><span>%</span></div></div>
+          <div class="field"><label for="lmHyd">Idratazione LM</label><div class="inp"><select id="lmHyd"><option value="50">50% (solido)</option><option value="100">100% (licoli)</option></select></div></div>
+        </div>
+        <div class="label">Fasi di lievitazione</div>
+        <div class="phase"><div class="name">Puntata<small>in massa, ambiente</small></div>
+          <div class="inp"><input id="pH" type="number" step="0.5" min="0" max="48" aria-label="Ore puntata"><span>h</span></div>
+          <div class="inp"><input id="pT" type="number" step="1" min="10" max="35" aria-label="Temperatura puntata"><span>°C</span></div></div>
+        <div class="phase"><div class="name">Frigo<small>maturazione</small></div>
+          <div class="inp"><input id="fH" type="number" step="1" min="0" max="120" aria-label="Ore frigo"><span>h</span></div>
+          <div class="inp"><input id="fT" type="number" step="1" min="1" max="10" aria-label="Temperatura frigo"><span>°C</span></div></div>
+        <div class="phase"><div class="name">Appretto<small>in teglia, ambiente</small></div>
+          <div class="inp"><input id="aH" type="number" step="0.5" min="0" max="12" aria-label="Ore appretto"><span>h</span></div>
+          <div class="inp"><input id="aT" type="number" step="1" min="10" max="35" aria-label="Temperatura appretto"><span>°C</span></div></div>
+        <p class="hint" id="yeastHint"></p>
+      </section>
+
+      <section class="card" id="prefCard">
+        <h2>Prefermento</h2>
+        <div class="seg" id="prefType" role="group" aria-label="Prefermento">
+          <button type="button" data-v="none">Diretto</button>
+          <button type="button" data-v="biga">Biga</button>
+          <button type="button" data-v="poolish">Poolish</button>
+        </div>
+        <div class="fields" id="prefFields">
+          <div class="field"><label for="prefPct">Farina nel prefermento</label><div class="inp"><input id="prefPct" type="number" step="5" min="10" max="100"><span>%</span></div></div>
+          <div class="field"><label for="prefH">Durata</label><div class="inp"><input id="prefH" type="number" step="1" min="4" max="48"><span>h</span></div></div>
+          <div class="field"><label for="prefT">Temperatura</label><div class="inp"><input id="prefT" type="number" step="1" min="4" max="28"><span>°C</span></div></div>
+        </div>
+        <p class="hint" id="prefHint"></p>
+      </section>
+
+      <section class="card">
+        <h2>Temperatura dell'acqua</h2>
+        <div class="fields">
+          <div class="field"><label for="tTarget">Impasto finale</label><div class="inp"><input id="tTarget" type="number" step="1" min="18" max="30"><span>°C</span></div></div>
+          <div class="field"><label for="tFlour">Farina</label><div class="inp"><input id="tFlour" type="number" step="1" min="0" max="35"><span>°C</span></div></div>
+          <div class="field"><label for="tRoom">Ambiente</label><div class="inp"><input id="tRoom" type="number" step="1" min="0" max="40"><span>°C</span></div></div>
+          <div class="field"><label for="mixer">Impasto</label><div class="inp"><select id="mixer"><option value="2">A mano</option><option value="6">Planetaria</option><option value="9">Spirale</option></select></div></div>
+        </div>
+        <p class="hint" id="waterHint"></p>
+      </section>
+    </div>
+
+    <div class="col result">
+      <div class="total">
+        <div><div class="label" style="color:inherit;opacity:.85">Impasto totale</div><div class="big" id="doughTot">0<span> g</span></div></div>
+        <div class="meta" id="totMeta"></div>
+      </div>
+
+      <section class="card">
+        <h2>Ingredienti</h2>
+        <div id="warns"></div>
+        <div class="tblwrap" id="ingr"></div>
+      </section>
+
+      <section class="card">
+        <h2>Peso per teglia</h2>
+        <div class="tblwrap" id="perPan"></div>
+      </section>
+
+      <section class="card">
+        <h2>Programma</h2>
+        <div class="field"><label for="bakeAt">Infornata</label><div class="inp"><input id="bakeAt" type="datetime-local"></div></div>
+        <ul class="tl" id="timeline"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Cottura in forno di casa</h2>
+        <div class="kv"><span>Temperatura</span><b>250 °C statico</b></div>
+        <div class="kv"><span>Ripiano</span><b>il più basso</b></div>
+        <div class="kv"><span>Teglia scura in ferro blu</span><b>12 a 15 min</b></div>
+        <div class="kv"><span>Alluminio o teglia chiara</span><b>15 a 18 min</b></div>
+        <p class="hint">Per la classica romana: 8 a 10 minuti con solo pomodoro, poi mozzarella e altri 4 a 5 minuti sul ripiano medio.</p>
+      </section>
+    </div>
+  </div>
+
+  <footer>Il lievito è una stima con modello termico: tempo equivalente a 20 °C, con attività che raddoppia ogni 8 °C circa, tarato su 0,15% di fresco per 24 h a 20 °C. Farine, frigo e cucine diversi spostano il risultato: dopo la prima prova correggi del 20 a 30% se l'impasto è arrivato troppo presto o troppo tardi. Lievito secco attivo calcolato come un terzo del fresco.</footer>
+</div>
+
+<script>
+const PRESETS = {
+  romana:{name:"Romana in teglia",load:0.55,hyd:78,salt:2.5,oil:3,malt:1,waste:3},
+  alta:{name:"Alta soffice",load:0.68,hyd:80,salt:2.5,oil:4,malt:1,waste:3},
+  sottile:{name:"Sottile croccante",load:0.42,hyd:70,salt:2.5,oil:4,malt:0.5,waste:3},
+  focaccia:{name:"Focaccia",load:0.6,hyd:75,salt:2.4,oil:6,malt:1,waste:3},
+  casalinga:{name:"Casalinga facile",load:0.6,hyd:65,salt:2.4,oil:4,malt:0,waste:3}
+};
+const DEF = {
+  pans:[{shape:"rect",a:40,b:30,q:1},{shape:"round",a:28,b:0,q:1}],
+  preset:"romana", ...PRESETS.romana,
+  yeast:"fresh", lmPct:20, lmHyd:"50",
+  pH:2,pT:22, fH:24,fT:4, aH:3,aT:24,
+  pref:"none", prefPct:50, prefH:16, prefT:18,
+  tTarget:24, tFlour:20, tRoom:22, mixer:"6",
+  bakeAt:""
+};
+let S;
+try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem("teglia-v1")||"{}")); }catch(e){ S = structuredClone(DEF); }
+if(!S.bakeAt){ const d=new Date(); d.setDate(d.getDate()+1); d.setHours(20,0,0,0); S.bakeAt=toLocalInput(d); }
+function save(){ try{ localStorage.setItem("teglia-v1", JSON.stringify(S)); }catch(e){} }
+function toLocalInput(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+const $=id=>document.getElementById(id);
+const nf0=new Intl.NumberFormat("it-IT",{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2=new Intl.NumberFormat("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
+const g = v => v < 10 ? nf1.format(v) : nf0.format(v);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+/* ---------- teglie ---------- */
+function renderPans(){
+  const box=$("pans"); box.innerHTML="";
+  S.pans.forEach((p,i)=>{
+    const row=document.createElement("div"); row.className="pan";
+    const round=p.shape==="round";
+    row.innerHTML=`
+      <div class="field shape"><label for="ps${i}">Forma</label><div class="inp"><select id="ps${i}"><option value="rect">Rettangolare</option><option value="round">Tonda</option></select></div></div>
+      <div class="field"><label for="pa${i}">${round?"Diametro":"Lunghezza"}</label><div class="inp"><input id="pa${i}" type="number" min="5" step="1" value="${p.a}"><span>cm</span></div></div>
+      <div class="field" ${round?'style="visibility:hidden"':""}><label for="pb${i}">Larghezza</label><div class="inp"><input id="pb${i}" type="number" min="5" step="1" value="${p.b}"><span>cm</span></div></div>
+      <div class="field"><label for="pq${i}">Pezzi</label><div class="inp"><input id="pq${i}" type="number" min="1" step="1" value="${p.q}"></div></div>
+      <button class="x" type="button" aria-label="Rimuovi teglia" ${S.pans.length<2?"disabled":""}>×</button>`;
+    row.querySelector("select").value=p.shape;
+    row.querySelector("select").onchange=e=>{p.shape=e.target.value; if(p.shape==="rect"&&!p.b)p.b=Math.round(p.a*0.75); renderPans(); calc();};
+    row.querySelector(`#pa${i}`).oninput=e=>{p.a=num(e.target.value);calc();};
+    row.querySelector(`#pb${i}`).oninput=e=>{p.b=num(e.target.value);calc();};
+    row.querySelector(`#pq${i}`).oninput=e=>{p.q=Math.max(0,Math.round(num(e.target.value)));calc();};
+    row.querySelector(".x").onclick=()=>{S.pans.splice(i,1);renderPans();calc();};
+    box.appendChild(row);
+  });
+}
+$("addPan").onclick=()=>{S.pans.push({shape:"rect",a:40,b:30,q:1});renderPans();calc();};
+const area = p => p.shape==="round" ? Math.PI*(p.a/2)**2 : p.a*p.b;
+
+/* ---------- preset ---------- */
+function renderPresets(){
+  const box=$("presets"); box.innerHTML="";
+  Object.entries(PRESETS).forEach(([k,v])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=v.name;
+    b.setAttribute("aria-pressed", S.preset===k);
+    b.onclick=()=>{S.preset=k; Object.assign(S,{load:v.load,hyd:v.hyd,salt:v.salt,oil:v.oil,malt:v.malt,waste:v.waste}); fillInputs(); renderPresets(); calc();};
+    box.appendChild(b);
+  });
+}
+
+/* ---------- segmenti ---------- */
+function seg(id,key){
+  const el=$(id);
+  el.querySelectorAll("button").forEach(b=>{
+    b.setAttribute("aria-pressed", S[key]===b.dataset.v);
+    b.onclick=()=>{S[key]=b.dataset.v; seg(id,key); calc();};
+  });
+}
+
+/* ---------- input semplici ---------- */
+const SIMPLE=["load","hyd","salt","oil","malt","waste","lmPct","lmHyd","pH","pT","fH","fT","aH","aT","prefPct","prefH","prefT","tTarget","tFlour","tRoom","mixer","bakeAt"];
+const RECIPE=["load","hyd","salt","oil","malt","waste"];
+function fillInputs(){ SIMPLE.forEach(k=>{ $(k).value=S[k]; }); }
+SIMPLE.forEach(k=>{
+  $(k).addEventListener("input",e=>{
+    S[k]=(k==="lmHyd"||k==="mixer"||k==="bakeAt")?e.target.value:num(e.target.value);
+    if(RECIPE.includes(k)){ S.preset=""; renderPresets(); }
+    calc();
+  });
+});
+
+/* ---------- modello lievito ---------- */
+const factor = T => Math.pow(2,(T-20)/8);
+function freshPct(hoursEq){ // % sul peso farina
+  if(hoursEq<=0) return null;
+  return Math.min(4, Math.max(0.02, 0.15*Math.pow(24/hoursEq,1.2)));
+}
+
+/* ---------- calcolo ---------- */
+function calc(){
+  save();
+  const yeastIsLM = S.yeast==="lm";
+  $("lmFields").hidden = !yeastIsLM;
+  $("prefCard").hidden = yeastIsLM;
+  const pref = yeastIsLM ? "none" : S.pref;
+  $("prefFields").hidden = pref==="none";
+
+  // area e peso
+  let A=0; S.pans.forEach(p=>A+=area(p)*p.q);
+  $("areaTot").textContent = nf0.format(A)+" cm²";
+  const doughNet = A*S.load;
+  const dough = doughNet*(1+S.waste/100);
+
+  const h=S.hyd/100, s=S.salt/100, o=S.oil/100, m=S.malt/100;
+  const hoursEq = S.pH*factor(S.pT) + S.fH*factor(S.fT) + S.aH*factor(S.aT);
+  const totalH = S.pH + S.fH + S.aH;
+  let yF = freshPct(hoursEq); // frazione %
+  const yeastMult = S.yeast==="dry" ? 1/3 : 1;
+  const warns=[];
+
+  let F, rows=[], phases=null;
+  if(yeastIsLM){
+    const l=S.lmPct/100, lh=num(S.lmHyd)/100;
+    F = dough/(1+h+s+o+m);
+    const lmMass=F*l, lmFlour=lmMass/(1+lh), lmWater=lmMass-lmFlour;
+    rows=[["Farina",F-lmFlour,(F-lmFlour)/F],["Acqua",F*h-lmWater,(F*h-lmWater)/F],["Lievito madre",lmMass,l],["Sale",F*s,s],["Olio EVO",F*o,o]];
+    if(m>0) rows.push(["Malto / zucchero",F*m,m]);
+    $("yeastHint").textContent = `Ore totali ${nf1.format(totalH)}, equivalenti a ${nf1.format(hoursEq)} h a 20 °C. Con il lievito madre i tempi dipendono molto dalla sua forza: usa questi valori come punto di partenza e guarda il volume.`;
+    if(F*h-lmWater<0) warns.push("L'acqua del lievito madre supera l'acqua totale: abbassa la percentuale di LM o alza l'idratazione.");
+  } else {
+    const yTot = yF===null ? 0 : yF/100*yeastMult;
+    F = dough/(1+h+s+o+m+yTot);
+    const yName = S.yeast==="dry" ? "Lievito secco" : "Lievito fresco";
+    if(yF===null){ warns.push("Inserisci almeno una fase di lievitazione per calcolare il lievito."); }
+    $("yeastHint").textContent = yF===null ? "" :
+      `Ore totali ${nf1.format(totalH)}, equivalenti a ${nf1.format(hoursEq)} h a 20 °C. Lievito ${S.yeast==="dry"?"secco":"fresco"}: ${nf2.format(yF*yeastMult)}% sulla farina.`;
+    if(yF!==null && yF>=3.99) warns.push("Tempi molto brevi: il lievito è al massimo consigliato (4% fresco). Allunga la lievitazione se puoi.");
+
+    if(pref==="none"){
+      rows=[["Farina",F,1],["Acqua",F*h,h],[yName,F*yTot,yTot],["Sale",F*s,s],["Olio EVO",F*o,o]];
+      if(m>0) rows.push(["Malto / zucchero",F*m,m]);
+    } else {
+      const pp=S.prefPct/100, pF=F*pp;
+      let pW, pY, prefNote;
+      if(pref==="biga"){ pW=pF*0.45; pY=pF*0.01*yeastMult; prefNote=`Biga al 45% di idratazione con 1% di lievito fresco sulla sua farina. Ideale ${nf0.format(S.prefH)} h a ${nf0.format(S.prefT)} °C (classico: 16 a 18 h a 18 °C).`; }
+      else { pW=pF; const py=freshPct(S.prefH*factor(S.prefT)); pY=pF*py/100*yeastMult; prefNote=`Poolish al 100% di idratazione, lievito ${nf2.format(py*yeastMult)}% sulla sua farina per ${nf0.format(S.prefH)} h a ${nf0.format(S.prefT)} °C. Pronto quando la superficie è piena di bolle e inizia a incurvarsi al centro.`; }
+      const cF=F-pF, cW=F*h-pW, cY=F*yTot*(1-pp);
+      $("prefHint").textContent=prefNote+(pp>=1?" Con il 100% di prefermento in chiusura non serve altro lievito.":" In chiusura aggiungi il lievito in proporzione alla farina nuova.");
+      if(cW<0) warns.push("L'acqua del prefermento supera l'acqua totale: riduci la percentuale di prefermento o alza l'idratazione.");
+      if(pref==="biga" && h<0.6) warns.push("Con la biga e meno del 60% di idratazione totale l'impasto viene molto rigido.");
+      phases=[
+        [pref==="biga"?"Biga":"Poolish",[["Farina",pF,pp],["Acqua",pW,pW/F],[yName,pY,pY/F]]],
+        ["Chiusura",[["Farina",cF,cF/F],["Acqua",cW,cW/F],...(cY>0.05?[[yName,cY,cY/F]]:[]),["Sale",F*s,s],["Olio EVO",F*o,o],...(m>0?[["Malto / zucchero",F*m,m]]:[])]]
+      ];
+      rows=[["Farina totale",F,1],["Acqua totale",F*h,h],[yName+" totale",pY+cY,(pY+cY)/F],["Sale",F*s,s],["Olio EVO",F*o,o],...(m>0?[["Malto / zucchero",F*m,m]]:[])];
+    }
+  }
+
+  // output totale
+  $("doughTot").innerHTML = nf0.format(dough)+"<span> g</span>";
+  $("totMeta").innerHTML = `${nf0.format(A)} cm² × ${nf2.format(S.load)} g/cm²<br>+${nf0.format(S.waste)}% scarto`;
+  $("warns").innerHTML = warns.map(w=>`<div class="warn">${w}</div>`).join("");
+
+  const tbl = (rs,withSum)=>{
+    let tot=0;
+    const body=rs.map(([n,v,p])=>{tot+=v; return `<tr><td>${n}</td><td class="n">${g(Math.max(0,v))} g</td><td class="p">${nf1.format(p*100)}%</td></tr>`;}).join("");
+    return `<table><thead><tr><th>Ingrediente</th><th class="n">Peso</th><th class="n">%</th></tr></thead><tbody>${body}${withSum?`<tr class="sum"><td>Totale</td><td class="n">${nf0.format(tot)} g</td><td></td></tr>`:""}</tbody></table>`;
+  };
+  let html="";
+  if(phases){
+    phases.forEach(([n,rs])=>{ html+=`<div class="phasehead">${n}</div>`+tbl(rs,true); });
+    html+=`<div class="phasehead">Riepilogo</div>`+tbl(rows,false);
+  } else html=tbl(rows,true);
+  $("ingr").innerHTML=html;
+
+  // per teglia
+  $("perPan").innerHTML = `<table><thead><tr><th>Teglia</th><th class="n">cm²</th><th class="n">Panetto</th></tr></thead><tbody>`+
+    S.pans.map(p=>{
+      const a=area(p), lab=p.shape==="round"?`Tonda Ø ${p.a}`:`${p.a} × ${p.b}`;
+      return `<tr><td>${lab}${p.q>1?` <span style="color:var(--muted)">× ${p.q}</span>`:""}</td><td class="n">${nf0.format(a)}</td><td class="n">${nf0.format(a*S.load)} g</td></tr>`;
+    }).join("")+`</tbody></table><p class="hint" style="margin-top:8px">Pesi netti da mettere in teglia, lo scarto è già escluso.</p>`;
+
+  // acqua
+  const fric=num(S.mixer);
+  const tw = 3*S.tTarget - S.tFlour - S.tRoom - fric;
+  $("waterHint").innerHTML = `Usa acqua a <b style="font-family:var(--f-num)">${nf0.format(tw)} °C</b>`+
+    (tw<4?". Non ci arrivi con il rubinetto: usa acqua di frigo e sostituisci una parte con ghiaccio tritato.":tw>35?". Molto calda: controlla i dati, sopra i 35 °C stressi il lievito.":".")+
+    ` Formula: 3 × temperatura finale meno farina, ambiente e attrito dell'impastatrice.`;
+
+  // programma
+  const tl=$("timeline"); tl.innerHTML="";
+  const bake=new Date(S.bakeAt);
+  if(!isNaN(bake)){
+    const ms=h=>h*3600e3;
+    const steps=[];
+    let t=bake.getTime();
+    const tA=t-ms(S.aH), tF=tA-ms(S.fH), tP=tF-ms(S.pH);
+    if(pref!=="none") steps.push([tP-ms(S.prefH), pref==="biga"?"Prepara la biga":"Prepara il poolish", `${nf0.format(S.prefH)} h a ${nf0.format(S.prefT)} °C`]);
+    steps.push([tP,"Impasto",`acqua a ${nf0.format(tw)} °C, sale e olio alla fine`]);
+    if(S.pH>0) steps.push([tP,"Puntata",`${nf1.format(S.pH)} h a ${nf0.format(S.pT)} °C, 2 o 3 giri di pieghe nella prima ora`]);
+    if(S.fH>0) steps.push([tF,"In frigo",`${nf0.format(S.fH)} h, contenitore chiuso e unto`]);
+    if(S.aH>0) steps.push([tA,S.fH>0?"Fuori frigo, staglio in teglia":"Staglio in teglia",`stendi con le dita in teglia unta, ${nf1.format(S.aH)} h a ${nf0.format(S.aT)} °C`]);
+    steps.push([t,"Infornata","condisci e cuoci"]);
+    const df=new Intl.DateTimeFormat("it-IT",{weekday:"short",day:"numeric"}), tf=new Intl.DateTimeFormat("it-IT",{hour:"2-digit",minute:"2-digit"});
+    steps.forEach(([ts,n,d])=>{
+      const dd=new Date(ts), li=document.createElement("li");
+      li.innerHTML=`<div class="t">${tf.format(dd)}<small>${df.format(dd)}</small></div><div><b>${n}</b><div class="hint">${d}</div></div>`;
+      tl.appendChild(li);
+    });
+    if(steps[0][0]<Date.now()) tl.insertAdjacentHTML("afterbegin",`<li style="display:block"><div class="warn">Per l'infornata scelta avresti dovuto iniziare già: sposta l'orario o accorcia i tempi.</div></li>`);
+  }
+}
+
+renderPans(); renderPresets(); fillInputs(); seg("yeastType","yeast"); seg("prefType","pref"); calc();
+</script>
+</body>
+</html>
