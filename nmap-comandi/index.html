@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Comandi nmap · PandaToolkit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+<link rel="stylesheet" href="../assets/panda.css">
+<style>
+/* Layout: impostazioni a sinistra, comandi generati a destra (sticky, con scroll interno), una colonna su telefono.
+   Colori, font e controlli comuni stanno in ../assets/panda.css */
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.result{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+@media (max-width:900px){.result{position:static;max-height:none;overflow:visible}}
+
+.inp textarea{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:14px/1.45 var(--f-num);padding:8px 10px;outline:none;resize:vertical;min-height:64px}
+.inp input[type=time]{font-family:var(--f-num)}
+.two{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.sub{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px dashed var(--line)}
+.sub:first-child{border-top:0;padding-top:0}
+.sub .label{display:flex;gap:8px;align-items:baseline}
+.chips.sm .chip{padding:4px 10px;font-size:12.5px}
+.chip code,.tag code{font-family:var(--f-num);font-weight:400}
+.notes{display:flex;flex-direction:column;gap:6px}
+.info{background:var(--accent-soft);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:13px}
+
+/* comandi */
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn.sm{padding:4px 10px;font-size:12.5px;align-self:center}
+.btn.solid{background:var(--accent);color:var(--accent-ink);border-style:solid}
+.cmd{display:flex;flex-direction:column;gap:6px;min-width:0}
+.cmdhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cmdhead .label{text-transform:none;letter-spacing:0;font-size:12.5px}
+pre.code{margin:0;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:12.5px/1.55 var(--f-num);color:var(--fg);white-space:pre;overflow-x:auto;tab-size:2;max-width:100%}
+pre.code .c{color:var(--muted)}
+.phead{display:flex;gap:10px;align-items:baseline}
+.phead .num{font-family:var(--f-num);font-size:12px;color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:1px 8px;flex:none}
+.flags{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 12px;font-size:13.5px}
+.flags dt{font:600 12.5px var(--f-num);color:var(--accent);padding-top:1px;max-width:14ch;overflow-wrap:anywhere}
+.flags dd{margin:0}
+@media (max-width:420px){.flags{grid-template-columns:minmax(0,1fr);gap:2px}.flags dd{margin-bottom:8px}}
+.copied{color:var(--accent)}
+@media (max-width:520px){pre.code{font-size:12px;padding:9px 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← PandaToolkit</a>
+  <header>
+    <h1>Comandi nmap</h1>
+    <p>Costruisci i comandi per scansionare la tua rete a fasi, da copiare in Bash o PowerShell, con la spiegazione di ogni flag e gli avvisi sulle combinazioni lente o rumorose.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2>Rete e file</h2>
+        <div class="seg" id="os" role="group" aria-label="Sistema operativo">
+          <button type="button" data-v="nix">Linux / macOS (Bash)</button>
+          <button type="button" data-v="win">Windows PowerShell</button>
+        </div>
+        <div class="field"><label for="targets">Target (CIDR, range, host: uno o più per riga)</label>
+          <div class="inp"><textarea id="targets" rows="3" spellcheck="false" autocomplete="off" placeholder="192.168.1.0/24&#10;192.168.1.10-50&#10;nas.example.lan"></textarea></div></div>
+        <div class="field"><label for="excl">Esclusioni (facoltative)</label>
+          <div class="inp"><textarea id="excl" rows="2" spellcheck="false" autocomplete="off" placeholder="192.168.1.1"></textarea></div></div>
+        <div id="tgtNotes" class="notes"></div>
+        <div class="two">
+          <div class="field"><label for="folder">Cartella dei risultati</label><div class="inp"><input id="folder" type="text" spellcheck="false" autocomplete="off" placeholder="scans"></div></div>
+          <div class="field"><label for="base">Nome base dei file</label><div class="inp"><input id="base" type="text" spellcheck="false" autocomplete="off" placeholder="lan"></div></div>
+        </div>
+        <div class="chips sm"><button type="button" class="chip" id="dated">Data nel nome dei file</button></div>
+        <p class="hint" id="fileHint"></p>
+      </section>
+
+      <section class="card">
+        <h2>Fasi <small id="phCount"></small></h2>
+        <div class="chips" id="phases"></div>
+        <p class="hint">Ogni fase genera un blocco di comandi commentato. L'ordine segue il piano: prima chi c'è, poi cosa ascolta, poi cosa gira.</p>
+      </section>
+
+      <section class="card" id="phOpts">
+        <h2>Opzioni delle fasi</h2>
+        <div class="sub" data-ph="1">
+          <div class="label">1 · Sonde di scoperta</div>
+          <div class="chips sm" id="probes"></div>
+          <div class="chips sm"><button type="button" class="chip" id="useLive">Fasi successive solo sugli host trovati (<code>-iL</code>)</button></div>
+        </div>
+        <div class="sub" data-ph="2 6">
+          <div class="label">2 · Porte TCP veloci</div>
+          <div class="fields"><div class="field"><label for="top">Top porte</label><div class="inp"><input id="top" type="number" min="1" max="65535" step="1"><span>porte</span></div></div></div>
+        </div>
+        <div class="sub" data-ph="3">
+          <div class="label">3 · Tutte le porte TCP</div>
+          <div class="fields"><div class="field"><label for="allRate">Velocità minima</label><div class="inp"><input id="allRate" type="number" min="10" max="100000" step="100"><span>pkt/s</span></div></div></div>
+          <p class="hint">Usata se in Opzioni avanzate non hai messo un <code>--min-rate</code> globale.</p>
+        </div>
+        <div class="sub" data-ph="4">
+          <div class="label">4 · Servizi e versioni</div>
+          <div class="fields" id="manPortsBox"><div class="field"><label for="manPorts">Porte da analizzare</label><div class="inp"><input id="manPorts" type="text" spellcheck="false" autocomplete="off"></div></div></div>
+          <p class="hint" id="p4hint"></p>
+          <div class="chips sm"><button type="button" class="chip" id="osdet">Rileva il sistema operativo (<code>-O</code>)</button></div>
+        </div>
+        <div class="sub" data-ph="5">
+          <div class="label">5 · Porte UDP</div>
+          <div class="seg" id="udp" role="group" aria-label="Porte UDP">
+            <button type="button" data-v="20">Top 20</button><button type="button" data-v="100">Top 100</button><button type="button" data-v="1000">Top 1000</button><button type="button" data-v="all">Tutte</button>
+          </div>
+        </div>
+        <div class="sub" data-ph="6">
+          <div class="label">6 · IPv6</div>
+          <div class="field"><label for="v6">Host IPv6 da scansionare</label><div class="inp"><input id="v6" type="text" spellcheck="false" autocomplete="off" placeholder="2001:db8::10 fe80::1%eth0"></div></div>
+          <p class="hint">Gli indirizzi link-local (<code>fe80::</code>) vogliono l'interfaccia dopo <code>%</code>. L'interfaccia per la scoperta si imposta in Opzioni avanzate.</p>
+        </div>
+        <div class="sub" data-ph="7">
+          <div class="label">7 · Script NSE</div>
+          <div class="chips sm" id="scripts"></div>
+        </div>
+        <div class="sub" data-ph="8">
+          <div class="label">8 · Pianificazione</div>
+          <div class="seg" id="freq" role="group" aria-label="Frequenza">
+            <button type="button" data-v="daily">Ogni giorno</button><button type="button" data-v="weekly">Ogni lunedì</button>
+          </div>
+          <div class="fields"><div class="field"><label for="time">Ora</label><div class="inp"><input id="time" type="time"></div></div></div>
+        </div>
+        <p class="hint" id="noOpts">Seleziona una fase per vederne le opzioni.</p>
+      </section>
+
+      <section class="card">
+        <h2>Opzioni avanzate</h2>
+        <div class="label">Timing</div>
+        <div class="seg" id="T" role="group" aria-label="Modello di timing">
+          <button type="button" data-v="0">-T0</button><button type="button" data-v="1">-T1</button><button type="button" data-v="2">-T2</button><button type="button" data-v="3">-T3</button><button type="button" data-v="4">-T4</button><button type="button" data-v="5">-T5</button>
+        </div>
+        <p class="hint" id="tHint"></p>
+        <div class="label">Collegamento del PC che scansiona</div>
+        <div class="seg" id="link" role="group" aria-label="Collegamento">
+          <button type="button" data-v="wired">Cavo</button><button type="button" data-v="wifi">Wi-Fi</button>
+        </div>
+        <div class="fields">
+          <div class="field"><label for="minRate">--min-rate</label><div class="inp"><input id="minRate" type="number" min="1" step="100" placeholder="auto"><span>pkt/s</span></div></div>
+          <div class="field"><label for="maxRetries">--max-retries</label><div class="inp"><input id="maxRetries" type="number" min="0" max="10" step="1" placeholder="auto"></div></div>
+          <div class="field"><label for="iface">Interfaccia -e</label><div class="inp"><input id="iface" type="text" spellcheck="false" autocomplete="off" placeholder="eth0"></div></div>
+          <div class="field"><label for="sport">Porta sorgente</label><div class="inp"><input id="sport" type="number" min="1" max="65535" step="1" placeholder="nessuna"></div></div>
+        </div>
+        <div class="label">DNS</div>
+        <div class="seg" id="dns" role="group" aria-label="Risoluzione DNS">
+          <button type="button" data-v="sys">Risolvi i nomi</button><button type="button" data-v="no">Niente DNS (-n)</button><button type="button" data-v="srv">Server DNS scelti</button>
+        </div>
+        <div class="field" id="dnsSrvBox"><label for="dnsSrv">--dns-servers</label><div class="inp"><input id="dnsSrv" type="text" spellcheck="false" autocomplete="off" placeholder="192.168.1.1"></div></div>
+        <div class="label">Opzioni</div>
+        <div class="chips sm" id="toggles"></div>
+        <div class="label">Formati di output</div>
+        <div class="chips sm" id="fmt"></div>
+        <div class="label">Verbosità</div>
+        <div class="seg" id="verb" role="group" aria-label="Verbosità">
+          <button type="button" data-v="">Normale</button><button type="button" data-v="v">-v</button><button type="button" data-v="vv">-vv</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="col result">
+      <section class="card">
+        <h2>Comandi <small id="sum"></small></h2>
+        <div class="notes" id="warns"></div>
+        <div class="bar">
+          <button class="btn solid" type="button" id="copyAll">Copia tutto come script</button>
+          <button class="btn" type="button" id="dlAll">Scarica</button>
+          <span class="hint" id="allMsg" aria-live="polite"></span>
+        </div>
+      </section>
+      <div class="col" id="blocks"></div>
+      <section class="card">
+        <h2>Cosa fa ogni flag</h2>
+        <dl class="flags" id="flags"></dl>
+      </section>
+    </div>
+  </div>
+
+  <footer>Usa questi comandi solo su reti e dispositivi tuoi o che hai l'autorizzazione scritta a testare: scansionare reti altrui può essere illegale. Gli indirizzi di esempio sono privati o di documentazione. La pagina non invia nulla: genera solo testo, che resta nel tuo browser.</footer>
+</div>
+
+<script>
+const PH = [
+  {n:1, slug:"scoperta", name:"Scoperta host", intro:"Chi risponde in rete. Sulla stessa LAN, da root, nmap usa ARP: vede anche chi blocca il ping."},
+  {n:2, slug:"top", name:"Porte TCP veloci", intro:"Le porte TCP più comuni su ogni host: un primo quadro in pochi minuti."},
+  {n:3, slug:"tutte", name:"Tutte le porte TCP", intro:"Tutte le 65.535 porte TCP, per trovare servizi su porte insolite."},
+  {n:4, slug:"servizi", name:"Servizi e versioni", intro:"Versioni e script di default solo sulle porte già trovate aperte: preciso e molto più rapido che su tutte."},
+  {n:5, slug:"udp", name:"UDP principali", intro:"DNS, DHCP, SNMP, NTP, mDNS, SSDP: i servizi UDP che contano. Lento, meglio poche porte."},
+  {n:6, slug:"ipv6", name:"IPv6", intro:"In LAN l'IPv6 è spesso attivo anche se non lo usi: i servizi possono ascoltare lì senza le regole del firewall IPv4."},
+  {n:7, slug:"script", name:"Script mirati", intro:"Controlli specifici con NSE: cifrari TLS, titoli web, firma SMB, algoritmi SSH, DNS ricorsivo."},
+  {n:8, slug:"baseline", name:"Baseline e confronto", intro:"Salva una scansione di riferimento e confronta le successive con ndiff: vedi subito porte nuove o sparite."}
+];
+const PROBES = {PR:{f:"-PR",l:"ARP (-PR)"}, PE:{f:"-PE",l:"ICMP echo (-PE)"}, PS:{f:"-PS22,80,443,445",l:"TCP SYN (-PS)"}, PA:{f:"-PA80,443",l:"TCP ACK (-PA)"}};
+const SCRIPTS = {
+  ssl:{l:"ssl-enum-ciphers", s:["ssl-enum-ciphers"], tcp:[443,8443]},
+  http:{l:"http-title", s:["http-title"], tcp:[80,443,8080,8443]},
+  smb:{l:"smb-security-mode", s:["smb-security-mode","smb2-security-mode"], tcp:[445]},
+  ssh:{l:"ssh2-enum-algos", s:["ssh2-enum-algos"], tcp:[22]},
+  dns:{l:"dns", s:["dns-recursion","dns-nsid"], udp:[53]}
+};
+const TOGGLES = {Pn:"-Pn (salta la scoperta)", reason:"--reason", open:"--open"};
+const FMTS = {A:"-oA (tutti)", X:"-oX", N:"-oN", G:"-oG"};
+const THINT = {
+  "0":"Paranoid: 5 minuti tra una sonda e l'altra. Serve solo a eludere un IDS, in pratica non finisce mai.",
+  "1":"Sneaky: 15 secondi tra le sonde. Lentissimo.",
+  "2":"Polite: 0,4 secondi tra le sonde per non caricare la rete. Molto lento con tante porte.",
+  "3":"Normal: il default di nmap, va bene ovunque.",
+  "4":"Aggressive: timeout più brevi. La scelta giusta su una LAN cablata moderna.",
+  "5":"Insane: timeout minimi. Rischia di perdere porte, soprattutto su Wi-Fi o dispositivi lenti."
+};
+const FLAGS = {
+  "sudo":"Esegue nmap come root: necessario per SYN scan (-sS), UDP (-sU), ping ARP e rilevamento OS (-O). Senza privilegi nmap ripiega su connect scan e alcune opzioni non funzionano.",
+  "admin":"Su Windows non c'è sudo: apri PowerShell come amministratore (serve per -sS, -sU, -O e ARP) e installa nmap con Npcap.",
+  "-sn":"Solo scoperta host, nessuna scansione di porte: elenca chi risponde.",
+  "-PR":"Ping ARP: sulla stessa LAN è il metodo più affidabile, risponde anche chi blocca il ping. Da root nmap lo usa da solo per i target sulla rete locale.",
+  "-PE":"Ping ICMP echo, il ping classico. Serve per host fuori dalla LAN locale (altre VLAN, VPN).",
+  "-PS":"Ping TCP SYN verso le porte indicate: chi risponde con SYN/ACK o RST è vivo.",
+  "-PA":"Ping TCP ACK verso le porte indicate: passa alcuni firewall che bloccano i SYN.",
+  "-sS":"SYN scan (half-open): invia un SYN e legge la risposta senza completare la connessione. Veloce, richiede privilegi.",
+  "-sU":"Scansione UDP. Lenta per natura: una porta che non risponde risulta open|filtered, aperta o filtrata.",
+  "-sV":"Riconosce servizio e versione interrogando le porte aperte.",
+  "--version-intensity":"Quanto insistere nel riconoscere la versione, da 0 (poche sonde) a 9 (tutte). 0 tiene veloce l'UDP e basta a chiarire molti open|filtered.",
+  "-sC":"Esegue gli script NSE della categoria default, sicuri e informativi (equivale a --script=default).",
+  "-O":"Indovina il sistema operativo dall'impronta TCP/IP. Richiede privilegi e funziona meglio con almeno una porta aperta e una chiusa.",
+  "-p":"Porte da scansionare: elenco o intervalli. Con T: e U: separi le porte TCP da quelle UDP nello stesso comando.",
+  "-p-":"Tutte le 65.535 porte (come -p 1-65535).",
+  "--top-ports":"Le N porte più frequenti secondo le statistiche di nmap.",
+  "--min-rate":"Invia almeno N pacchetti al secondo: accorcia molto le scansioni lunghe, ma su link deboli fa perdere risposte.",
+  "--max-retries":"Ritrasmissioni massime per sonda (di default fino a 10). Valori bassi velocizzano a scapito della precisione.",
+  "-T0":THINT[0],"-T1":THINT[1],"-T2":THINT[2],"-T3":THINT[3],"-T4":THINT[4],"-T5":THINT[5],
+  "-Pn":"Salta la scoperta e scansiona ogni indirizzo come se fosse vivo. Utile con host che non rispondono al ping, ma su range grandi perde tempo sugli indirizzi vuoti.",
+  "-n":"Nessuna risoluzione DNS inversa: più veloce e senza query al DNS.",
+  "--dns-servers":"Usa questi server DNS per la risoluzione inversa al posto di quelli di sistema (utile per vedere i nomi dati dal tuo DNS locale).",
+  "-e":"Usa questa interfaccia di rete. I nomi validi li vedi con nmap --iflist.",
+  "--source-port":"Porta sorgente fissa per i pacchetti (per esempio 53), per verificare firewall che si fidano di certe porte. Non vale per -sV, per gran parte degli script e per le connessioni TCP complete.",
+  "--reason":"Mostra perché ogni porta ha quello stato (syn-ack, reset, no-response...).",
+  "--open":"Mostra solo le porte aperte o forse aperte, nasconde chiuse e filtrate.",
+  "-v":"Verboso: mostra le porte man mano che le trova e l'avanzamento.",
+  "-vv":"Molto verboso: ancora più dettagli durante la scansione.",
+  "-oA":"Salva in tre formati con lo stesso nome base: .nmap (leggibile), .xml (per ndiff e altri strumenti), .gnmap (una riga per host, per grep).",
+  "-oX":"Salva in XML: serve a ndiff e agli strumenti di analisi.",
+  "-oN":"Salva l'output normale, leggibile.",
+  "-oG":"Salva in formato grepable, una riga per host: comodo per estrarre IP e porte.",
+  "-iL":"Legge i target da un file, uno per riga.",
+  "--exclude":"Esclude questi host o range (separati da virgola).",
+  "-6":"Scansione IPv6: senza questo flag nmap usa solo IPv4.",
+  "--script":"Esegue gli script NSE indicati, separati da virgola.",
+  "--script-args":"Parametri per gli script. newtargets aggiunge alla scansione gli host scoperti, interface indica la scheda su cui cercarli.",
+  "targets-ipv6-multicast-echo":"Invia un ping ICMPv6 all'indirizzo multicast ff02::1: rispondono tutti gli host IPv6 del segmento.",
+  "targets-ipv6-multicast-slaac":"Provoca la configurazione SLAAC per scoprire anche gli host che ignorano il ping multicast.",
+  "ssl-enum-ciphers":"Elenca versioni TLS e cifrari accettati, con un voto da A a F per ciascuno.",
+  "http-title":"Mostra il titolo della pagina web: riconosci al volo router, NAS, pannelli di gestione.",
+  "smb-security-mode":"SMBv1: modalità di sicurezza e firma dei messaggi. Se risponde, SMBv1 è ancora attivo.",
+  "smb2-security-mode":"SMB2/3: dice se la firma dei messaggi è abilitata e obbligatoria.",
+  "ssh2-enum-algos":"Elenca gli algoritmi SSH offerti (scambio chiavi, cifrari, MAC): trovi quelli vecchi da disattivare.",
+  "dns-recursion":"Verifica se il server DNS risolve nomi per chiunque (ricorsione aperta).",
+  "dns-nsid":"Chiede al DNS identità e versione (NSID, id.server, version.bind).",
+  "ndiff":"Confronta due XML di nmap e stampa host e porte comparsi, spariti o cambiati (righe con + e -).",
+  "cron":"Pianifica lo script con cron (Linux/macOS). Usa il crontab di root così nmap ha i privilegi senza chiedere la password.",
+  "schtasks":"Registra un'attività pianificata che gira come SYSTEM con privilegi massimi, anche senza utente connesso."
+};
+const DEF = {os:"nix", targets:"192.168.1.0/24", excl:"", folder:"scans", base:"lan", dated:true, phases:[1,2,4],
+  probes:["PR","PE","PS","PA"], useLive:true, top:1000, allRate:1000, manPorts:"22,80,443", osdet:false, udp:"100",
+  v6:"2001:db8::10", scripts:["ssl","http","smb","ssh","dns"], freq:"weekly", time:"03:30",
+  T:"4", link:"wired", minRate:"", maxRetries:"", iface:"", sport:"", dns:"sys", dnsSrv:"",
+  Pn:false, reason:false, open:true, fmt:["A"], verb:"v"};
+const KEY = "nmap-comandi-v1";
+let S;
+try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ S = structuredClone(DEF); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat("it-IT");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- parsing target ---------- */
+const octOk = o => /^\d{1,3}$/.test(o) && +o <= 255;
+function octCount(part){ // nmap: 1-50, 1,5,9, *, combinazioni
+  if(part === "*") return 256;
+  let n = 0;
+  for(const p of part.split(",")){
+    if(p === "") return -1;
+    const m = p.match(/^(\d{0,3})-(\d{0,3})$/);
+    if(m){ const a = m[1]===""?0:+m[1], b = m[2]===""?255:+m[2]; if(a>255||b>255||a>b) return -1; n += b-a+1; }
+    else if(octOk(p)) n += 1; else return -1;
+  }
+  return n;
+}
+function firstIp(tok){ const o = tok.split("/")[0].split("."); return o.map(x => { const m = x.match(/\d+/); return m ? +m[0] : 0; }); }
+function isPrivate(o){
+  return o[0]===10 || o[0]===127 || (o[0]===172 && o[1]>=16 && o[1]<=31) || (o[0]===192 && o[1]===168) || (o[0]===169 && o[1]===254) || (o[0]===100 && o[1]>=64 && o[1]<=127);
+}
+function parseTok(t){
+  if(t.includes(":")) return /^[0-9a-f:.]+(%[\w.-]+)?(\/\d{1,3})?$/i.test(t) ? {kind:"v6", t} : {kind:"bad", t};
+  let m = t.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+  if(m){ const p = +m[2]; if(!m[1].split(".").every(octOk) || p>32) return {kind:"bad", t}; return {kind:"v4", t, n:2**(32-p), prefix:p, o:firstIp(t)}; }
+  const parts = t.split(".");
+  if(parts.length===4 && parts.every(x => /^[\d,*-]+$/.test(x))){
+    let n = 1; for(const p of parts){ const c = octCount(p); if(c<0) return {kind:"bad", t}; n *= c; }
+    return {kind:"v4", t, n, prefix:32-Math.log2(n), o:firstIp(t)};
+  }
+  if(/^(?=.*[a-z])[a-z0-9]([a-z0-9-]{0,62})(\.[a-z0-9-]{1,63})*\.?$/i.test(t)) return {kind:"host", t, n:1};
+  return {kind:"bad", t};
+}
+function parseList(txt){
+  const out = [];
+  String(txt||"").split(/\n/).forEach(line => {
+    line = line.replace(/#.*/, "").trim(); if(!line) return;
+    line.split(/[\s;]+/).forEach(t => { if(t) out.push(parseTok(t.replace(/,+$/,""))); });
+  });
+  return out;
+}
+
+/* ---------- sintassi per sistema ---------- */
+function sys(){
+  const win = S.os === "win";
+  return {win, sep: win ? "\\" : "/", cont: win ? " `\n  " : " \\\n  ",
+    date: win ? "$(Get-Date -f yyyy-MM-dd)" : "$(date +%F)", pre: win ? "" : "sudo "};
+}
+function arg(s){ // quoting di un argomento generato
+  const X = sys();
+  if(X.win) return /[,;{}()@$`'"&|<>\s#]/.test(s) ? '"' + s.replace(/"/g,'`"') + '"' : s;
+  return /[*?\[\]{}()$`'"&|<>;\s!#~\\]/.test(s) ? "'" + s.replace(/'/g,"'\\''") + "'" : s;
+}
+function folderPrefix(){
+  const X = sys();
+  let f = String(S.folder||"").trim().replace(/["$`'%]/g,"").replace(/[\\/]+/g, X.sep).replace(/[\\/]+$/,"");
+  if(f === "~") f = "$HOME"; else if(f.startsWith("~" + X.sep)) f = "$HOME" + f.slice(1);
+  return f ? f + X.sep : "";
+}
+function baseName(){ return (String(S.base||"").trim().replace(/[^\w.-]+/g,"-").replace(/^-+|-+$/g,"")) || "lan"; }
+function outBase(n, extra){ return folderPrefix() + `${baseName()}-0${n}-${PH[n-1].slug}${extra?"-"+extra:""}${S.dated?"-"+sys().date:""}`; }
+function fixedFile(name){ return folderPrefix() + `${baseName()}-${name}`; }
+const q = p => '"' + p + '"';
+
+/* ---------- costruzione ---------- */
+let USED, WARN, INFO;
+function use(...k){ k.forEach(x => USED.add(x)); }
+function nmap(groups){
+  const X = sys();
+  use(X.win ? "admin" : "sudo");
+  return X.pre + "nmap " + groups.filter(Boolean).join(X.cont);
+}
+function perf(n, opts){
+  const g = ["-T" + S.T]; use("-T" + S.T);
+  const rate = S.minRate !== "" ? S.minRate : (opts && opts.rate);
+  const ret = S.maxRetries !== "" ? S.maxRetries : (opts && opts.retries);
+  if(rate !== undefined && rate !== ""){ g.push("--min-rate " + (+rate)); use("--min-rate"); }
+  if(ret !== undefined && ret !== ""){ g.push("--max-retries " + (+ret)); use("--max-retries"); }
+  return g.join(" ");
+}
+function misc(opts){
+  opts = opts || {};
+  const g = [];
+  if(S.Pn && !opts.disc){ g.push("-Pn"); use("-Pn"); }
+  if(S.dns === "no"){ g.push("-n"); use("-n"); }
+  else if(S.dns === "srv" && dnsList().length){ g.push("--dns-servers " + arg(dnsList().join(","))); use("--dns-servers"); }
+  if(S.iface.trim() && !opts.noIface){ g.push("-e " + arg(S.iface.trim())); use("-e"); }
+  if(String(S.sport).trim() && !opts.noSport){ g.push("--source-port " + (+S.sport)); use("--source-port"); }
+  if(S.reason){ g.push("--reason"); use("--reason"); }
+  if(S.open && !opts.disc){ g.push("--open"); use("--open"); }
+  if(S.verb){ g.push("-" + S.verb); use("-" + S.verb); }
+  return g.join(" ");
+}
+const pm = (a, b) => [a, b].filter(Boolean).join(" ");
+function dnsList(){ return String(S.dnsSrv||"").split(/[\s,;]+/).filter(Boolean); }
+function outFlags(n, need, extra){
+  const b = outBase(n, extra), g = [], f = new Set(S.fmt);
+  if(f.has("A")){ g.push("-oA " + q(b)); use("-oA"); }
+  else {
+    if(f.has("N")){ g.push("-oN " + q(b + ".nmap")); use("-oN"); }
+    if(f.has("X") || need.includes("X")){ g.push("-oX " + q(b + ".xml")); use("-oX"); }
+    if(f.has("G") || need.includes("G")){ g.push("-oG " + q(b + ".gnmap")); use("-oG"); }
+  }
+  return g.join(" ");
+}
+function excl(){
+  const e = parseList(S.excl).filter(x => x.kind === "v4" || x.kind === "host").map(x => x.t);
+  if(!e.length) return "";
+  use("--exclude"); return "--exclude " + arg(e.join(","));
+}
+function tgt(live){
+  if(live){ use("-iL"); return "-iL " + q(fixedFile("live.txt")); }
+  const t = parseList(S.targets).filter(x => x.kind === "v4" || x.kind === "host").map(x => arg(x.t));
+  return t.length ? t.join(" ") : "192.168.1.0/24";
+}
+const sel = n => S.phases.includes(n);
+
+function build(){
+  USED = new Set(); WARN = []; INFO = [];
+  const X = sys(), blocks = [];
+  const later = [2,3,5,7].some(sel);
+  const live = S.useLive && sel(1) && later;
+  const src4 = sel(3) ? 3 : sel(2) ? 2 : 0;
+  const src8 = sel(4) ? 4 : sel(3) ? 3 : sel(2) ? 2 : sel(1) ? 1 : 0;
+  const need = {1:[],2:[],3:[],4:[],5:[],6:[],7:[],8:[]};
+  if(live) need[1].push("G");
+  if(sel(4) && src4) need[src4].push("G");
+  if(sel(8) && src8) need[src8].push("X");
+
+  // preparazione
+  const mk = folderPrefix().replace(/[\\/]$/,"");
+  if(mk) blocks.push({n:0, name:"Preparazione", intro:"Crea la cartella dei risultati.", cmds:[{label:"Cartella", code: X.win ? `New-Item -ItemType Directory -Force -Path ${q(mk)} | Out-Null` : `mkdir -p ${q(mk)}`}]});
+
+  if(sel(1)){
+    const pr = S.probes.filter(k => PROBES[k]).map(k => { use(PROBES[k].f.match(/^-P./)[0]); return arg(PROBES[k].f); });
+    use("-sn");
+    const cmds = [{label:"Scoperta", code: nmap(["-sn " + pr.join(" "), pm(perf(1), misc({disc:true})), excl(), outFlags(1, need[1]), tgt(false)])}];
+    if(live){
+      const g = outBase(1) + ".gnmap", lf = fixedFile("live.txt");
+      cmds.push({label:"Elenco host vivi per le fasi successive", code: X.win
+        ? `Select-String -Path ${q(g)} -Pattern 'Status: Up' |\n  ForEach-Object { ($_.Line -split '\\s+')[1] } | Set-Content ${q(lf)}\n(Get-Content ${q(lf)}).Count`
+        : `awk '/Status: Up/{print $2}' ${q(g)} > ${q(lf)}\nwc -l < ${q(lf)}`});
+    }
+    blocks.push({n:1, cmds});
+  }
+  if(sel(2)){
+    use("-sS","--top-ports");
+    blocks.push({n:2, cmds:[{label:"Top " + (+S.top||1000) + " porte TCP", code: nmap(["-sS --top-ports " + (+S.top||1000), pm(perf(2), misc()), excl(), outFlags(2, need[2]), tgt(live)])}]});
+  }
+  if(sel(3)){
+    use("-sS","-p-");
+    blocks.push({n:3, cmds:[{label:"Tutte le porte TCP", code: nmap(["-sS -p-", pm(perf(3, {rate:+S.allRate||1000, retries:2}), misc()), excl(), outFlags(3, need[3]), tgt(live)])}]});
+  }
+  if(sel(4)){
+    use("-sV","-sC","-p"); if(S.osdet) use("-O");
+    const scan = "-sV -sC" + (S.osdet ? " -O" : "");
+    const cmds = [];
+    if(src4){
+      const g = outBase(src4) + ".gnmap", hf = fixedFile("hosts-open.txt");
+      cmds.push({label:`Porte e host aperti dalla fase ${src4}`, code: X.win
+        ? `$F = ${q(g)}\n$PORTS = ((Select-String -Path $F -Pattern '(\\d+)/open/tcp' -AllMatches).Matches |\n  ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique) -join ','\nSelect-String -Path $F -Pattern '/open/' | ForEach-Object { ($_.Line -split '\\s+')[1] } |\n  Sort-Object -Unique | Set-Content ${q(hf)}\n"Porte aperte: $(if ($PORTS) { $PORTS } else { 'nessuna, salta il comando seguente' })"`
+        : `F=${q(g)}\nPORTS=$(grep -oE '[0-9]+/open/tcp' "$F" | cut -d/ -f1 | sort -un | paste -sd, -)\ngrep '/open/' "$F" | awk '{print $2}' | sort -u > ${q(hf)}\necho "Porte aperte: \${PORTS:-nessuna, salta il comando seguente}"`});
+      use("-iL");
+      cmds.push({label:"Servizi e versioni", code: nmap([scan, "-p " + (X.win ? "$PORTS" : '"$PORTS"'), pm(perf(4), misc()), excl(), outFlags(4, need[4]), "-iL " + q(hf)])});
+    } else {
+      const ports = String(S.manPorts||"").replace(/\s+/g,"") || "22,80,443";
+      if(!/^[TU:\d,-]+$/i.test(ports)) WARN.push("Porte della fase 4 non valide: usa numeri, virgole e trattini (es. 22,80,443,8000-8100).");
+      cmds.push({label:"Servizi e versioni", code: nmap([scan, "-p " + arg(ports), pm(perf(4), misc()), excl(), outFlags(4, need[4]), tgt(live)])});
+    }
+    blocks.push({n:4, cmds});
+  }
+  if(sel(5)){
+    use("-sU","-sV","--version-intensity");
+    const p = S.udp === "all" ? "-p-" : "--top-ports " + S.udp; use(S.udp === "all" ? "-p-" : "--top-ports");
+    blocks.push({n:5, cmds:[{label:S.udp === "all" ? "Tutte le porte UDP" : `Top ${S.udp} porte UDP`, code: nmap(["-sU " + p + " -sV --version-intensity 0", pm(perf(5), misc()), excl(), outFlags(5, need[5]), tgt(live)])}]});
+  }
+  if(sel(6)){
+    const ifc = S.iface.trim() || "eth0";
+    use("-6","-sn","-e","--script","--script-args","targets-ipv6-multicast-echo","targets-ipv6-multicast-slaac");
+    const v6 = parseList(S.v6).filter(x => x.kind === "v6").map(x => arg(x.t));
+    const cmds = [
+      {label:"Vicini IPv6 già noti al sistema", code: X.win
+        ? `Get-NetNeighbor -AddressFamily IPv6 | Where-Object State -ne 'Unreachable' |\n  Sort-Object InterfaceAlias | Format-Table InterfaceAlias, IPAddress, LinkLayerAddress, State`
+        : `# macOS: ping6 -c 3 ff02::1%en0 && ndp -an\nping -6 -c 3 ${arg("ff02::1%" + ifc)}\nip -6 neigh show dev ${arg(ifc)}`},
+      {label:"Scoperta IPv6 sul segmento (multicast)", code: nmap(["-6 -sn -e " + arg(ifc), "--script " + arg("targets-ipv6-multicast-echo,targets-ipv6-multicast-slaac"), "--script-args " + arg("newtargets,interface=" + ifc), pm(perf(6), misc({disc:true, noIface:true})), outFlags(6, need[6], "scoperta")])}
+    ];
+    use("-sS","--top-ports");
+    cmds.push({label:"Porte TCP sugli host IPv6", code: nmap(["-6 -sS --top-ports " + (+S.top||1000), pm(perf(6), misc()), outFlags(6, [], "porte"), v6.length ? v6.join(" ") : "2001:db8::10"])});
+    if(!v6.length) WARN.push("Fase 6: nessun indirizzo IPv6 valido negli host da scansionare, uso l'esempio 2001:db8::10. Prendili dall'output della scoperta.");
+    if(!S.iface.trim()) INFO.push(`Fase 6: interfaccia non impostata, uso <code>eth0</code>. Trova il nome giusto con <code>nmap --iflist</code>${X.win ? "" : " o <code>ip -br link</code>"}.`);
+    blocks.push({n:6, cmds});
+  }
+  if(sel(7)){
+    const ks = S.scripts.filter(k => SCRIPTS[k]);
+    if(!ks.length){ blocks.push({n:7, cmds:[], empty:"Scegli almeno uno script nelle opzioni della fase 7."}); }
+    else {
+      const tcp = [...new Set(ks.flatMap(k => SCRIPTS[k].tcp || []))].sort((a,b) => a-b);
+      const udp = [...new Set(ks.flatMap(k => SCRIPTS[k].udp || []))];
+      const names = ks.flatMap(k => SCRIPTS[k].s); use(...names);
+      const types = [tcp.length ? "-sS" : "", udp.length ? "-sU" : ""].filter(Boolean);
+      use(...types, "-sV", "-p", "--script");
+      const ports = tcp.length && udp.length ? `T:${tcp.join(",")},U:${udp.join(",")}` : (tcp.length ? tcp : udp).join(",");
+      blocks.push({n:7, cmds:[{label:"Script NSE", code: nmap([types.join(" ") + " -sV", "-p " + arg(ports), "--script " + arg(names.join(",")), pm(perf(7), misc()), excl(), outFlags(7, need[7]), tgt(live)])}]});
+    }
+  }
+  if(sel(8)){
+    use("ndiff", X.win ? "schtasks" : "cron");
+    const srcX = src8 ? outBase(src8) + ".xml" : outBase(2) + ".xml";
+    const bl = fixedFile("baseline.xml"), df = folderPrefix() + `${baseName()}-diff${S.dated ? "-" + X.date : ""}.txt`;
+    const [hh, mm] = (S.time || "03:30").split(":").map(x => +x || 0);
+    const scriptName = `scan-${baseName()}.${X.win ? "ps1" : "sh"}`;
+    const cmds = [{label:`Confronto con la baseline (fase ${src8 || 2})`, code: X.win
+      ? `if (-not (Test-Path ${q(bl)})) { Copy-Item ${q(srcX)} ${q(bl)} }\nndiff ${q(bl)} ${q(srcX)} | Set-Content ${q(df)}\nGet-Content ${q(df)}`
+      : `[ -f ${q(bl)} ] || cp ${q(srcX)} ${q(bl)}\nndiff ${q(bl)} ${q(srcX)} > ${q(df)}\ncat ${q(df)}`}];
+    if(X.win){
+      const trig = S.freq === "daily" ? `-Daily -At '${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}'` : `-Weekly -DaysOfWeek Monday -At '${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}'`;
+      cmds.push({label:"Attività pianificata (una volta, da PowerShell amministratore)", sched:true, code:
+        `$script = Join-Path $PWD '${scriptName}'\n$a = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File \`"$script\`""\n$t = New-ScheduledTaskTrigger ${trig}\nRegister-ScheduledTask -TaskName 'Scansione ${baseName()}' -Action $a -Trigger $t -User 'SYSTEM' -RunLevel Highest`});
+    } else {
+      cmds.push({label:"Riga per il crontab di root (sudo crontab -e)", sched:true, code:
+        `${mm} ${hh} * * ${S.freq === "daily" ? "*" : "1"} /percorso/completo/${scriptName} >> /percorso/completo/${mk ? mk.replace(/^\$HOME/,"~") + "/" : ""}cron.log 2>&1`});
+    }
+    if(!src8) INFO.push("Fase 8: nessuna fase di scansione selezionata, il confronto usa il file XML della fase 2.");
+    if(!S.dated) INFO.push("Fase 8: senza data nel nome ogni scansione sovrascrive la precedente; il confronto resta valido perché la baseline è un file a parte.");
+    blocks.push({n:8, cmds});
+  }
+  return blocks;
+}
+
+/* ---------- avvisi ---------- */
+function warnings(){
+  const t = parseList(S.targets), e = parseList(S.excl), X = sys();
+  const v4 = t.filter(x => x.kind === "v4"), hosts = t.filter(x => x.kind === "host");
+  const bad = t.filter(x => x.kind === "bad").map(x => x.t), badE = e.filter(x => x.kind === "bad" || x.kind === "v6").map(x => x.t);
+  const total = v4.reduce((s,x) => s + x.n, 0) + hosts.length;
+  const notes = [];
+  if(!v4.length && !hosts.length) notes.push(["warn", "Nessun target valido: uso l'esempio 192.168.1.0/24."]);
+  if(bad.length) notes.push(["warn", `Non riconosco: <code>${bad.map(esc).join("</code>, <code>")}</code>. Scrivi un IP (192.168.1.10), una rete CIDR (192.168.1.0/24), un range (192.168.1.10-50) o un nome host.`]);
+  if(badE.length) notes.push(["warn", `Esclusioni ignorate: <code>${badE.map(esc).join("</code>, <code>")}</code>.`]);
+  const v6 = t.filter(x => x.kind === "v6");
+  if(v6.length) notes.push(["warn", `Indirizzi IPv6 nei target (<code>${v6.map(x => esc(x.t)).join("</code>, <code>")}</code>): nmap non mescola IPv4 e IPv6, mettili nella fase 6.`]);
+  const pub = v4.filter(x => !isPrivate(x.o));
+  if(pub.length) notes.push(["warn", `<code>${pub.map(x => esc(x.t)).join("</code>, <code>")}</code> non è un indirizzo privato. Scansiona solo reti tue o con autorizzazione scritta.`]);
+  const wide = v4.filter(x => x.prefix < 16);
+  if(wide.length) notes.push(["warn", `Rete enorme (${wide.map(x => esc(x.t)).join(", ")}): oltre 65.536 indirizzi. Una LAN di casa di solito è una /24.`]);
+  return {notes, total};
+}
+function comboWarn(total){
+  const W = [], T = +S.T, wifi = S.link === "wifi", rate = +S.minRate || 0;
+  if(T <= 1) W.push(`-T${T} è pensato per non farsi notare: anche una scoperta su poche decine di host può durare ore o giorni.`);
+  if(sel(3) && T === 2) W.push(`Tutte le porte con -T2: nmap aspetta 0,4 s tra le sonde, cioè circa 7 ore per host${total > 256 ? `, settimane su ${nf.format(total)} indirizzi` : ""}. Usa -T3 o -T4 con --min-rate.`);
+  if(sel(3) && total > 4096) W.push(`Tutte le porte TCP su ${nf.format(total)} indirizzi: tanto traffico e tempi lunghi. Restringi ai soli host vivi (fase 1 con -iL) o a una /24.`);
+  if(sel(5) && S.udp === "all") W.push("UDP su tutte le porte: molti sistemi limitano le risposte ICMP a circa una al secondo, quindi servono ore per ogni host. Le top 100 coprono quasi tutto quello che conta.");
+  if(sel(5) && S.udp === "1000" && total > 256) W.push(`Top 1000 UDP su ${nf.format(total)} indirizzi: sarà molto lento.`);
+  if(T === 5 && wifi) W.push("-T5 su Wi-Fi: con timeout così corti si perdono risposte e porte aperte. Su Wi-Fi resta su -T3 o -T4.");
+  else if(T === 5) W.push("-T5 accorcia i timeout al minimo: su dispositivi lenti (IoT, stampanti) può dare porte mancanti.");
+  if(wifi && rate > 1000) W.push(`--min-rate ${nf.format(rate)} su Wi-Fi: oltre circa 1000 pacchetti al secondo il Wi-Fi perde pacchetti.`);
+  else if(rate > 5000) W.push(`--min-rate ${nf.format(rate)}: molto aggressivo, può saturare switch economici o il router e falsare i risultati.`);
+  if(sel(3) && wifi && !rate && +S.allRate > 1000) W.push(`Fase 3 a ${nf.format(+S.allRate)} pkt/s su Wi-Fi: rischi porte perse, prova 500 o 1000.`);
+  if(S.Pn && total > 256) W.push(`-Pn su ${nf.format(total)} indirizzi: scansiona anche quelli vuoti, attendendo il timeout su ognuno.`);
+  if(S.maxRetries !== "" && +S.maxRetries === 0) W.push("--max-retries 0: nessuna ritrasmissione, ogni pacchetto perso diventa una porta mancata.");
+  if(S.dns === "srv" && !dnsList().length) W.push("Server DNS scelti ma nessun indirizzo inserito.");
+  return W;
+}
+
+/* ---------- script completo ---------- */
+function fullScript(blocks){
+  const X = sys(), today = new Date().toISOString().slice(0,10), L = [];
+  if(X.win){
+    L.push("#Requires -RunAsAdministrator", `# Comandi nmap · PandaToolkit · generato il ${today}`, "# Solo su reti tue o con autorizzazione scritta.",
+      "# Esegui da PowerShell come amministratore: .\\" + `scan-${baseName()}.ps1`, "# Se l'esecuzione degli script è bloccata: powershell -ExecutionPolicy Bypass -File .\\" + `scan-${baseName()}.ps1`,
+      "", "Set-Location $PSScriptRoot");
+  } else {
+    L.push("#!/usr/bin/env bash", `# Comandi nmap · PandaToolkit · generato il ${today}`, "# Solo su reti tue o con autorizzazione scritta.",
+      `# Esegui: bash scan-${baseName()}.sh  (sudo chiederà la password; da cron di root non serve)`, "", 'cd "$(dirname "$0")"');
+  }
+  blocks.forEach(b => {
+    const p = PH[b.n-1];
+    L.push("", "# " + "=".repeat(60), "# " + (b.n ? `Fase ${b.n} · ${p.name}` : b.name), "# " + (b.n ? p.intro : b.intro), "# " + "=".repeat(60));
+    if(b.empty) L.push("# " + b.empty);
+    b.cmds.forEach(c => {
+      L.push("# " + c.label + (c.sched ? " (da eseguire a mano una volta, non a ogni giro)" : ""));
+      L.push(c.sched ? c.code.split("\n").map(l => "# " + l).join("\n") : c.code);
+    });
+  });
+  return L.join("\n") + "\n";
+}
+
+/* ---------- copia ---------- */
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly",""); ta.style.position = "fixed"; ta.style.opacity = "0"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select(); let ok = false; try{ ok = document.execCommand("copy"); }catch(_){} ta.remove(); return ok;
+  }
+}
+function flash(btn, ok){ const o = btn.dataset.l || btn.textContent; btn.dataset.l = o; btn.textContent = ok ? "Copiato" : "Seleziona e copia"; btn.classList.toggle("copied", ok); setTimeout(() => { btn.textContent = o; btn.classList.remove("copied"); }, 1600); }
+
+/* ---------- render ---------- */
+let LAST = [];
+function render(){
+  const X = sys();
+  const blocks = build(), {notes, total} = warnings();
+  LAST = blocks;
+  // note target
+  $("tgtNotes").innerHTML = notes.map(([k,h]) => `<div class="${k}">${h}</div>`).join("") || `<p class="hint">${nf.format(total)} indirizzi da analizzare.</p>`;
+  $("fileHint").innerHTML = `Esempio: <code>${esc(outBase(2))}</code> + .nmap / .xml / .gnmap`;
+  // avvisi
+  const W = comboWarn(total);
+  const priv = X.win ? FLAGS.admin : "Servono privilegi di root (sudo) per SYN scan, UDP, ping ARP e rilevamento OS: per questo i comandi iniziano con sudo.";
+  $("warns").innerHTML = [...W.map(w => `<div class="warn">${esc(w)}</div>`), ...WARN.map(w => `<div class="warn">${esc(w)}</div>`), ...INFO.map(i => `<div class="info">${i}</div>`), `<div class="info">${esc(priv)}</div>`].join("");
+  const nCmd = blocks.reduce((s,b) => s + b.cmds.length, 0);
+  $("sum").textContent = `${nCmd} comandi · ${nf.format(total)} indirizzi`;
+  $("dlAll").textContent = `Scarica scan-${baseName()}.${X.win ? "ps1" : "sh"}`;
+  // blocchi
+  const box = $("blocks"); box.innerHTML = "";
+  if(!blocks.some(b => b.n)){ box.innerHTML = `<section class="card"><p class="hint">Seleziona almeno una fase per generare i comandi.</p></section>`; }
+  blocks.forEach(b => {
+    const p = PH[b.n-1], sec = document.createElement("section"); sec.className = "card";
+    sec.innerHTML = `<h2><span class="phead">${b.n ? `<span class="num">${b.n}</span>` : ""}<span>${esc(b.n ? p.name : b.name)}</span></span></h2><p class="hint">${esc(b.n ? p.intro : b.intro)}</p>` + (b.empty ? `<div class="warn">${esc(b.empty)}</div>` : "");
+    b.cmds.forEach(c => {
+      const d = document.createElement("div"); d.className = "cmd";
+      d.innerHTML = `<div class="cmdhead"><span class="label">${esc(c.label)}</span><button class="btn sm" type="button">Copia</button></div><pre class="code" tabindex="0"></pre>`;
+      d.querySelector("pre").textContent = c.code;
+      d.querySelector("button").onclick = async e => flash(e.currentTarget, await copyText(c.code));
+      sec.appendChild(d);
+    });
+    box.appendChild(sec);
+  });
+  // flag
+  const order = [X.win ? "admin" : "sudo"].concat([...USED].filter(k => k !== "sudo" && k !== "admin"));
+  $("flags").innerHTML = order.filter(k => FLAGS[k]).map(k => `<dt>${esc(k === "admin" ? "Amministratore" : k === "schtasks" ? "Register-ScheduledTask" : k)}</dt><dd>${esc(FLAGS[k])}</dd>`).join("");
+  // opzioni fasi visibili
+  let any = false;
+  document.querySelectorAll("#phOpts .sub").forEach(s => { const on = s.dataset.ph.split(" ").some(n => sel(+n)); s.hidden = !on; any = any || on; });
+  $("noOpts").hidden = any;
+  // la prima sub visibile senza bordo
+  let first = true; document.querySelectorAll("#phOpts .sub").forEach(s => { if(!s.hidden){ s.style.borderTop = first ? "0" : ""; s.style.paddingTop = first ? "0" : ""; first = false; } });
+  $("manPortsBox").hidden = !!(sel(2) || sel(3));
+  $("p4hint").textContent = (sel(3) || sel(2)) ? `Le porte arrivano dall'output della fase ${sel(3) ? 3 : 2}: uno snippet estrae porte e host aperti dal file .gnmap.` : "Nessuna fase di porte selezionata: indica tu le porte (o aggiungi la fase 2 o 3).";
+  $("useLive").hidden = !later();
+  $("dnsSrvBox").hidden = S.dns !== "srv";
+  $("tHint").textContent = THINT[S.T];
+  $("phCount").textContent = `${S.phases.length} di 8`;
+  save();
+}
+const later = () => [2,3,5,7].some(sel);
+
+/* ---------- controlli ---------- */
+function seg(id, key){
+  $(id).querySelectorAll("button").forEach(b => {
+    b.setAttribute("aria-pressed", String(S[key] === b.dataset.v));
+    b.onclick = () => { S[key] = b.dataset.v; seg(id, key); render(); };
+  });
+}
+function chipSet(boxId, items, key, label){
+  const box = $(boxId); box.innerHTML = "";
+  Object.entries(items).forEach(([k, v]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip";
+    b.innerHTML = label(k, v);
+    b.setAttribute("aria-pressed", String(S[key].includes(k)));
+    b.onclick = () => {
+      if(key === "fmt"){
+        if(k === "A") S.fmt = S.fmt.includes("A") ? [] : ["A"];
+        else { S.fmt = S.fmt.filter(x => x !== "A"); S.fmt = S.fmt.includes(k) ? S.fmt.filter(x => x !== k) : [...S.fmt, k]; }
+      } else {
+        S[key] = S[key].includes(k) ? S[key].filter(x => x !== k) : [...S[key], k];
+      }
+      chipSet(boxId, items, key, label); render();
+    };
+    box.appendChild(b);
+  });
+}
+function toggle(id, key){
+  const b = $(id); b.setAttribute("aria-pressed", String(!!S[key]));
+  b.onclick = () => { S[key] = !S[key]; b.setAttribute("aria-pressed", String(S[key])); render(); };
+}
+function initToggles(){
+  const box = $("toggles"); box.innerHTML = "";
+  Object.entries(TOGGLES).forEach(([k, l]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = "tg-" + k; b.innerHTML = `<code>${esc(l.split(" ")[0])}</code>${esc(l.slice(l.split(" ")[0].length))}`;
+    box.appendChild(b); toggle(b.id, k);
+  });
+}
+S.phases = S.phases.map(Number).filter(n => n >= 1 && n <= 8);
+(function phaseChips(){
+  const box = $("phases");
+  PH.forEach(p => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.n = p.n;
+    b.textContent = `${p.n} · ${p.name}`;
+    b.setAttribute("aria-pressed", String(sel(p.n)));
+    b.onclick = () => { S.phases = sel(p.n) ? S.phases.filter(x => x !== p.n) : [...S.phases, p.n].sort((a,b) => a-b); b.setAttribute("aria-pressed", String(sel(p.n))); render(); };
+    box.appendChild(b);
+  });
+})();
+chipSet("probes", PROBES, "probes", (k, v) => esc(v.l));
+chipSet("scripts", SCRIPTS, "scripts", (k, v) => `<code>${esc(v.l)}</code>`);
+chipSet("fmt", FMTS, "fmt", (k, v) => `<code>${esc(v.split(" ")[0])}</code>${esc(v.slice(v.split(" ")[0].length))}`);
+initToggles();
+toggle("dated", "dated"); toggle("useLive", "useLive"); toggle("osdet", "osdet");
+["os","udp","freq","T","link","dns","verb"].forEach(k => seg(k, k));
+["targets","excl","folder","base","top","allRate","manPorts","v6","time","minRate","maxRetries","iface","sport","dnsSrv"].forEach(k => {
+  const el = $(k); el.value = S[k]; el.addEventListener("input", () => { S[k] = el.value; render(); });
+});
+$("copyAll").onclick = async () => { const ok = await copyText(fullScript(LAST)); $("allMsg").textContent = ok ? `Script ${sys().win ? "PowerShell" : "Bash"} copiato.` : "Copia non riuscita: usa Scarica."; setTimeout(() => $("allMsg").textContent = "", 2500); };
+$("dlAll").onclick = () => {
+  const X = sys(), blob = new Blob([fullScript(LAST)], {type:"text/plain"}), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `scan-${baseName()}.${X.win ? "ps1" : "sh"}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+render();
+</script>
+</body>
+</html>

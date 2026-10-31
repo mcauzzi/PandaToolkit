@@ -40,5 +40,17 @@
       "monitoraggio"
     ],
     "emoji": "📖"
+  },
+  {
+    "slug": "nmap-comandi",
+    "name": "Comandi nmap",
+    "description": "Costruisci i comandi nmap per scansionare la tua rete a fasi (scoperta, porte, servizi, UDP, IPv6, script, confronto con ndiff), in Bash o PowerShell, con spiegazione dei flag e avvisi su combinazioni lente o rumorose.",
+    "tags": [
+      "rete",
+      "sicurezza",
+      "nmap",
+      "homelab"
+    ],
+    "emoji": "📡"
   }
 ]
