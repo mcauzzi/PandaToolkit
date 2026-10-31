@@ -40,18 +40,3 @@ A ogni push su `main` la workflow `deploy.yml` valida `tools.json` (ogni `slug` 
 Sul server gira come stack Komodo da `deploy/compose.yml`: container read-only, porta host `PORT` (default `8090`), davanti un reverse proxy con HTTPS. Komodo aggiorna il container quando esce l'immagine nuova.
 
 In alternativa funziona anche come sito statico su Cloudflare Pages (preset **None**, build command vuoto, output `/`) o GitHub Pages (c'è `.nojekyll`).
-
-## Dietro login (Authelia)
-
-Il sito non ha login suo: lo protegge Authelia tramite forward auth del reverse proxy, come gli altri servizi interni. Il container resta com'è, servono due modifiche fuori da questo repo.
-
-1. **Authelia** (config in `homelab-stack`): una regola per l'host, prima di eventuali regole generiche. Poi riavvia il container `authelia`, perché la config montata come file singolo non viene riletta al Deploy.
-   ```yaml
-   access_control:
-     rules:
-       - domain: pandatoolkit.<dominio>
-         policy: two_factor
-   ```
-2. **Caddy su OPNsense**: nuovo dominio `pandatoolkit.<dominio>` con upstream `<NAS>:8090` e forward auth attiva, come per `home.<dominio>`. Il certificato è già coperto dal wildcard.
-
-Facoltativo: aggiungere `https://pandatoolkit.<dominio>/` ai target blackbox per il monitoraggio.
