@@ -5,12 +5,20 @@ Raccolta di mini siti statici, uno per cartella, con una home che li elenca.
 ```
 index.html        home, legge tools.json
 tools.json        elenco degli strumenti
+assets/panda.css  stile condiviso: colori, font, tema chiaro/scuro, controlli comuni
 <slug>/index.html un tool, autocontenuto
 ```
 
 ## Aggiungere un tool
 
-1. Crea `<slug>/index.html` (HTML autocontenuto, percorsi relativi).
+1. Crea `<slug>/index.html` (HTML autocontenuto, percorsi relativi) e includi lo stile comune:
+   ```html
+   <link rel="stylesheet" href="../assets/panda.css">
+   ```
+   Nel `<style>` della pagina metti solo il layout specifico del tool. Dentro `panda.css` trovi già
+   `.wrap`, `.back` (link alla home), `.card`, `.fields`/`.field`/`.inp` per i campi con unità, `.chip`,
+   `.seg`, `.btn`, `.hint`, `.label`, `.warn`, `.tag` e le tabelle (`class="n"` per le colonne numeriche).
+   Per cambiare colori o font di tutto il sito si tocca solo quel file.
 2. Aggiungi una voce in `tools.json`:
    ```json
    { "slug": "<slug>", "name": "Nome", "description": "Cosa fa", "tags": ["..."], "emoji": "🔧" }

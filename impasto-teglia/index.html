@@ -5,68 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Impasto in teglia · PandaToolkit</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/panda.css">
 <style>
-/* Layout: scheda di lavoro a due colonne, parametri a sinistra e ricetta calcolata a destra (sticky), una colonna su telefono */
-:root{
-  --bg:#f3f5f0; --surface:#ffffff; --sunk:#e8ece3; --line:#d3d9cc;
-  --fg:#1d231b; --muted:#5d6858; --accent:#3f7d3a; --accent-ink:#ffffff; --accent-soft:#dfeedb;
-  --warn:#a3561a; --warn-soft:#f7e6d6;
-  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
-  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --r:10px; color-scheme:light;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
-  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
-  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
-  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
-  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(48px,env(safe-area-inset-bottom,0px))}
-.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-.back{font-size:13px;color:var(--muted);text-decoration:none}
-.back:hover{color:var(--accent)}
-header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,6vw,46px);line-height:1;margin:0;letter-spacing:-.02em;text-wrap:balance}
-header p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+/* Layout: scheda di lavoro a due colonne, parametri a sinistra e ricetta calcolata a destra (sticky), una colonna su telefono.
+   Colori, font e controlli comuni stanno in ../assets/panda.css */
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:20px;align-items:start}
 @media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
-section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
-h2{font-family:var(--f-display);font-weight:700;font-size:19px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-h2 small{font-family:var(--f-num);font-weight:400;font-size:12px;color:var(--muted)}
-.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
-.field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field label{font-size:12.5px;color:var(--muted);font-weight:500}
-.inp{display:flex;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-.inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font-family:var(--f-num);font-size:15px;padding:8px 10px;outline:none}
-.inp span{font-family:var(--f-num);font-size:12px;color:var(--muted);padding-right:10px}
-select{appearance:auto}
-.hint{font-size:12.5px;color:var(--muted);margin:0}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1px solid var(--line);background:var(--sunk);color:var(--fg);border-radius:999px;padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.chip:focus-visible,.btn:focus-visible,.x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pan{display:grid;grid-template-columns:110px 1fr 1fr 74px 34px;gap:8px;align-items:end}
 .pan .field label{font-size:11.5px}
 @media (max-width:520px){.pan{grid-template-columns:1fr 1fr;}.pan .shape{grid-column:1/-1}.pan .x{justify-self:end}}
 .pans{display:flex;flex-direction:column;gap:12px}
 .pans .pan+.pan{padding-top:12px;border-top:1px dashed var(--line)}
-.btn{border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;align-self:flex-start}
 .x{width:34px;height:38px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
 .x:hover{color:var(--warn);border-color:var(--warn)}
-.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px;flex-wrap:wrap}
-.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:600 13px var(--f-body);padding:7px 8px;border-radius:6px;cursor:pointer;min-width:max-content}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .phase{display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:center}
 .phase .name{font-weight:600;font-size:14px}
 .phase .name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
@@ -79,15 +32,10 @@ select{appearance:auto}
 .total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
 .total .big span{font-size:20px;font-weight:600}
 .total .meta{font-family:var(--f-num);font-size:12px;opacity:.85;text-align:right}
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-td,th{padding:7px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:400}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-td.n,th.n{text-align:right;font-family:var(--f-num)}
 td.p{text-align:right;font-family:var(--f-num);color:var(--muted);font-size:12.5px;width:64px}
 tr.sum td{font-weight:600;border-bottom:0}
 .tblwrap{overflow-x:auto}
 .phasehead{font-family:var(--f-display);font-weight:700;font-size:15px;margin:6px 0 0;color:var(--accent)}
-.warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
 .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .tl li{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .tl li:last-child{border-bottom:0}
@@ -95,8 +43,6 @@ tr.sum td{font-weight:600;border-bottom:0}
 .tl .t small{display:block;color:var(--muted);font-size:11px}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px}
 .kv b{font-family:var(--f-num);font-weight:600}
-footer{color:var(--muted);font-size:12.5px;max-width:75ch}
-@media (prefers-reduced-motion:no-preference){.chip,.seg button{transition:background .15s,color .15s}}
 </style>
 </head>
 <body>
