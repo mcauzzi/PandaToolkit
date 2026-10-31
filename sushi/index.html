@@ -6,6 +6,7 @@
 <title>Sushi fatto in casa · PandaToolkit</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
 <link rel="stylesheet" href="../assets/panda.css">
+<script src="../assets/panda.js"></script>
 <style>
 /* Layout: scheda di lavoro a due colonne, parametri a sinistra e piano calcolato a destra (sticky), una colonna su telefono.
    Colori, font e controlli comuni stanno in ../assets/panda.css */
@@ -216,14 +217,10 @@ const DEF = {
 };
 delete DEF.name;
 let S;
-try{
-  const st = JSON.parse(localStorage.getItem("sushi-v1")||"{}");
-  S = Object.assign(structuredClone(DEF), st);
-  S.preps = Object.fromEntries(Object.keys(PREPS).map(k=>[k,Object.assign({},DEF.preps[k],(st.preps||{})[k])]));
-  S.fills = Object.fromEntries(Object.keys(FILLS).map(k=>[k,Object.assign({},DEF.fills[k],(st.fills||{})[k])]));
-}catch(e){ S = structuredClone(DEF); }
+S = Panda.load("sushi-v1", DEF);
+Panda.share(() => S, DEF, "sushi-v1");
 if(!S.serveAt || isNaN(new Date(S.serveAt))){ const d=new Date(); if(d.getHours()>=17) d.setDate(d.getDate()+1); d.setHours(20,0,0,0); S.serveAt=toLocalInput(d); }
-function save(){ try{ localStorage.setItem("sushi-v1", JSON.stringify(S)); }catch(e){} }
+function save(){ Panda.save("sushi-v1", S); }
 function toLocalInput(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat("it-IT",{maximumFractionDigits:0});

@@ -79,6 +79,10 @@ select{appearance:auto}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .chip:focus-visible,.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+/* condivisione (assets/panda.js) */
+.sharebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.sharenote{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--accent-soft);color:var(--fg);border:1px solid var(--hero-line);border-radius:var(--r);padding:10px 12px;font-size:13.5px}
+
 /* tabelle: numeri in colonna con class="n" */
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 td,th{padding:7px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:400}

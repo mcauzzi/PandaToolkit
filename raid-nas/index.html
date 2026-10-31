@@ -6,6 +6,7 @@
 <title>Dischi e RAID · PandaToolkit</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💽</text></svg>">
 <link rel="stylesheet" href="../assets/panda.css">
+<script src="../assets/panda.js"></script>
 <style>
 /* Layout: scheda di lavoro a due colonne, dischi e confronto a sinistra, layout scelto a destra (sticky), una colonna su telefono.
    Colori, font e controlli comuni stanno in ../assets/panda.css */
@@ -182,9 +183,10 @@ const DEF = {
 };
 const KEY="raid-nas-v1";
 let S;
-try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ S = structuredClone(DEF); }
+S = Panda.load(KEY, DEF);
+Panda.share(() => S, DEF, KEY);
 if(!Array.isArray(S.groups)||!S.groups.length) S.groups=structuredClone(DEF.groups);
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ Panda.save(KEY, S); }
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat("it-IT",{maximumFractionDigits:0});
 const nf1=new Intl.NumberFormat("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1});

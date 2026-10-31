@@ -6,6 +6,7 @@ Raccolta di mini siti statici, uno per cartella, con una home che li elenca.
 index.html        home, legge tools.json
 tools.json        elenco degli strumenti
 assets/panda.css  stile condiviso: colori, font, tema chiaro/scuro, controlli comuni
+assets/panda.js   stato salvato nel browser e link di condivisione
 <slug>/index.html un tool, autocontenuto
 ```
 
@@ -19,6 +20,14 @@ assets/panda.css  stile condiviso: colori, font, tema chiaro/scuro, controlli co
    `.wrap`, `.back` (link alla home), `.card`, `.fields`/`.field`/`.inp` per i campi con unità, `.chip`,
    `.seg`, `.btn`, `.hint`, `.label`, `.warn`, `.tag` e le tabelle (`class="n"` per le colonne numeriche).
    Per cambiare colori o font di tutto il sito si tocca solo quel file.
+
+   Se il tool ha uno stato da ricordare o da condividere, includi anche `../assets/panda.js` e tieni lo stato in un oggetto:
+   ```js
+   let S = Panda.load("<slug>-v1", DEF);      // salvato nel browser, o quello di un link condiviso
+   Panda.share(() => S, DEF, "<slug>-v1");    // pulsante "Condividi" nell'header
+   function save(){ Panda.save("<slug>-v1", S); }
+   ```
+   Il link porta solo le differenze da `DEF`, dopo `#s=`: il fragment non arriva al server. Chi apre il link vede la "vista condivisa": niente link alla home e niente salvataggio finché non sceglie di tenere i valori.
 2. Aggiungi una voce in `tools.json`:
    ```json
    { "slug": "<slug>", "name": "Nome", "description": "Cosa fa", "tags": ["..."], "emoji": "🔧" }

@@ -6,6 +6,7 @@
 <title>Comandi nmap · PandaToolkit</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
 <link rel="stylesheet" href="../assets/panda.css">
+<script src="../assets/panda.js"></script>
 <style>
 /* Layout: impostazioni a sinistra, comandi generati a destra (sticky, con scroll interno), una colonna su telefono.
    Colori, font e controlli comuni stanno in ../assets/panda.css */
@@ -268,8 +269,9 @@ const DEF = {os:"nix", targets:"192.168.1.0/24", excl:"", folder:"scans", base:"
   Pn:false, reason:false, open:true, fmt:["A"], verb:"v"};
 const KEY = "nmap-comandi-v1";
 let S;
-try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ S = structuredClone(DEF); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+S = Panda.load(KEY, DEF);
+Panda.share(() => S, DEF, KEY);
+function save(){ Panda.save(KEY, S); }
 const $ = id => document.getElementById(id);
 const nf = new Intl.NumberFormat("it-IT");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
