@@ -29,5 +29,16 @@
       "hardware"
     ],
     "emoji": "💽"
+  },
+  {
+    "slug": "glossario-oracle",
+    "name": "Glossario Oracle",
+    "description": "Metriche Oracle (cursori, parse, cache di sessione, v$sysmetric) spiegate, con confronto PostgreSQL, SQL Server e MySQL.",
+    "tags": [
+      "database",
+      "oracle",
+      "monitoraggio"
+    ],
+    "emoji": "📖"
   }
 ]
