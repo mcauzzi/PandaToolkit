@@ -270,7 +270,33 @@ const DEF = {os:"nix", targets:"192.168.1.0/24", excl:"", folder:"scans", base:"
 const KEY = "nmap-comandi-v1";
 let S;
 S = Panda.load(KEY, DEF);
+clean(S);
 Panda.share(() => S, DEF, KEY);
+// Lo stato può arrivare da un link condiviso e finisce in comandi da lanciare con sudo o in
+// un crontab: le scelte devono essere tra quelle previste e i campi liberi perdono i
+// caratteri che la shell interpreta ($, `, ;, |, &, parentesi, virgolette...).
+function clean(s){
+  const pick = (v, ok, d) => ok.includes(String(v)) ? String(v) : d;
+  const keep = (v, re) => String(v ?? "").replace(re, "");
+  s.os = pick(s.os, ["nix","win"], DEF.os);
+  s.T = pick(s.T, ["0","1","2","3","4","5"], DEF.T);
+  s.link = pick(s.link, ["wired","wifi"], DEF.link);
+  s.dns = pick(s.dns, ["sys","no","srv"], DEF.dns);
+  s.verb = pick(s.verb, ["","v","vv"], DEF.verb);
+  s.udp = pick(s.udp, ["20","100","1000","all"], DEF.udp);
+  s.freq = pick(s.freq, ["daily","weekly"], DEF.freq);
+  s.time = /^\d{1,2}:\d{2}$/.test(s.time) ? s.time : DEF.time;
+  s.phases = s.phases.map(Number).filter(n => PH.some(p => p.n === n));
+  s.probes = s.probes.filter(k => k in PROBES);
+  s.scripts = s.scripts.filter(k => k in SCRIPTS);
+  s.fmt = s.fmt.filter(k => k in FMTS);
+  for(const k of ["targets","excl","v6","dnsSrv"]) s[k] = keep(s[k], /[^\w.:\/\-,*%\s]/g);
+  s.manPorts = keep(s.manPorts, /[^\d,\-TU:\s]/g);
+  s.iface = keep(s.iface, /[^\w.:\- ]/g);
+  s.folder = keep(s.folder, /[^\w.\/\\\- ~]/g);
+  for(const k of ["minRate","maxRetries","sport"]) s[k] = keep(s[k], /\D/g);
+  for(const k of ["top","allRate"]) s[k] = Math.max(1, Math.min(65535, Math.round(+s[k]) || DEF[k]));
+}
 function save(){ Panda.save(KEY, S); }
 const $ = id => document.getElementById(id);
 const nf = new Intl.NumberFormat("it-IT");
