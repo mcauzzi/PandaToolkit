@@ -1,6 +1,6 @@
 # Stack Komodo "pandatoolkit".
 # Variabile opzionale nell'Environment dello stack:
-#   PORT  porta sull'host del NAS (default 8092; la 8090 sul NAS è già di Telegraf), quella a cui punta il reverse proxy
+#   PORT  porta sull'host del NAS (default 8092), quella a cui punta il reverse proxy
 services:
   pandatoolkit:
     image: ghcr.io/mcauzzi/pandatoolkit:latest
