@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dischi e RAID · PandaToolkit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💽</text></svg>">
+<link rel="stylesheet" href="../assets/panda.css">
+<script src="../assets/panda.js"></script>
+<style>
+/* Layout: scheda di lavoro a due colonne, dischi e confronto a sinistra, layout scelto a destra (sticky), una colonna su telefono.
+   Colori, font e controlli comuni stanno in ../assets/panda.css */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* righe dischi */
+.drows{display:flex;flex-direction:column;gap:12px}
+.drow{display:grid;grid-template-columns:62px repeat(4,minmax(0,1fr)) minmax(0,1.15fr) 34px;gap:8px;align-items:end}
+.drow+.drow{padding-top:12px;border-top:1px dashed var(--line)}
+.drow .field label{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .inp input,.drow .inp select{padding:8px 6px;font-size:14px}
+.drow .inp span{padding-right:6px}
+@media (max-width:640px){.drow{grid-template-columns:repeat(3,minmax(0,1fr))}.drow .x{justify-self:end;grid-column:3}}
+.x{width:34px;height:38px;border:1px solid var(--ctl-line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+.x:hover:not(:disabled){color:var(--warn);border-color:var(--warn)}
+.x:disabled{opacity:.4;cursor:default}
+.x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rowbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+
+/* tabella confronto */
+.tblwrap{overflow-x:auto}
+#cmp td,#cmp th{padding:8px 6px;vertical-align:top}
+#cmp td:first-child,#cmp th:first-child{padding-left:8px}
+#cmp td:last-child,#cmp th:last-child{padding-right:8px}
+#cmp tbody tr{cursor:pointer}
+#cmp tbody tr:hover td{background:color-mix(in srgb,var(--accent-soft) 50%,transparent)}
+#cmp tbody tr[aria-selected="true"] td{background:var(--accent-soft)}
+#cmp tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+#cmp tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#cmp .ln{font-weight:600;font-size:14px;white-space:nowrap}
+#cmp small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
+#cmp td.n small{font-family:var(--f-num)}
+#cmp tr.bad td{color:var(--muted)}
+#cmp tr.bad .ln{color:var(--muted)}
+#cmp .why{font-size:12.5px;color:var(--warn)}
+#cmp td.n{white-space:nowrap}
+@media (max-width:520px){#cmp{font-size:13px}#cmp td,#cmp th{padding:7px 4px}#cmp .ln{font-size:13px}#cmp th{font-size:10px;letter-spacing:.04em}.best{display:none}}
+.best{font-size:10.5px;font-family:var(--f-num);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:1px}
+
+/* risultati */
+.result{position:sticky;top:16px}
+@media (max-width:900px){.result{position:static}}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:5px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:var(--f-num);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.kv.hl b{color:var(--accent)}
+.kvs{display:flex;flex-direction:column}
+.risk{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.risk.hi{color:var(--warn)}
+.risk.lo{color:var(--accent)}
+
+/* disegno dischi */
+.disks{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+.dk{flex:1 1 22px;max-width:56px;min-width:22px;display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.dk .body{height:130px;display:flex;flex-direction:column-reverse;border-radius:6px;overflow:hidden;background:transparent}
+.dk .s{display:flex;flex-direction:column-reverse;min-height:0}
+.dk .s i{display:block;min-height:0}
+.dk .cap{font:11px var(--f-num);color:var(--muted);text-align:center;white-space:nowrap}
+.c-data{background:var(--accent)}
+.c-par{background:var(--warn)}
+.c-mir{background:color-mix(in srgb,var(--accent) 40%,var(--surface))}
+.c-free{background:repeating-linear-gradient(135deg,var(--sunk) 0 5px,color-mix(in srgb,var(--line) 70%,var(--sunk)) 5px 7px)}
+.c-void{background:transparent}
+.dk .s+.s{border-bottom:2px solid var(--surface)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← PandaToolkit</a>
+  <header>
+    <h1>Dischi e RAID</h1>
+    <p>Quanto spazio ti resta davvero con i tuoi dischi in RAID, SHR o ZFS, quanto costa al TB, quanto consuma e quanto rischi durante una ricostruzione. Dischi di taglie diverse ammessi.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2>Dischi <small id="diskTot"></small></h2>
+        <div class="chips" id="examples" aria-label="Esempi"></div>
+        <div class="drows" id="drows"></div>
+        <div class="rowbtns">
+          <button class="btn" id="addRow" type="button">+ Aggiungi gruppo di dischi</button>
+          <span class="tag" id="costTot"></span>
+        </div>
+        <p class="hint">Un gruppo è un insieme di dischi uguali. Prezzo e consumi sono per singolo disco, dalla scheda tecnica. URE è il tasso di errori di lettura non recuperabili dichiarato: 1 bit su 10<sup>14</sup> per i dischi desktop e NAS base, 10<sup>15</sup> per IronWolf Pro, WD Red Pro e dischi enterprise.</p>
+      </section>
+
+      <section class="card">
+        <h2>Confronto layout <small>tocca una riga per i dettagli</small></h2>
+        <div class="tblwrap"><table id="cmp"></table></div>
+        <div id="cmpNotes"></div>
+      </section>
+
+      <section class="card">
+        <h2>Spazio e riserve</h2>
+        <div class="seg" id="unit" role="group" aria-label="Unità di misura">
+          <button type="button" data-v="tb">TB (decimali, come in etichetta)</button>
+          <button type="button" data-v="tib">TiB (binari, come li mostra il sistema)</button>
+        </div>
+        <div class="fields">
+          <div class="field"><label for="reserve">Riserva filesystem</label><div class="inp"><input id="reserve" type="number" step="0.5" min="0" max="20"><span>%</span></div></div>
+          <div class="field"><label for="keepFree">Da tenere libero</label><div class="inp"><input id="keepFree" type="number" step="5" min="0" max="50"><span>%</span></div></div>
+        </div>
+        <p class="hint">Riserva: metadati e spazio trattenuto dal filesystem. ZFS tiene da parte 1/32 del pool (circa 3,1%), ext4 il 5% per root (ma si può ridurre), Btrfs su Synology circa 2 a 3%. Da tenere libero: ZFS rallenta e frammenta oltre l'80% di riempimento, quindi lascia il 20%; per RAID classico con ext4 o Btrfs bastano 10 a 15%.</p>
+      </section>
+
+      <section class="card">
+        <h2>Energia e ricostruzione</h2>
+        <div class="fields">
+          <div class="field"><label for="hActive">Ore attive al giorno</label><div class="inp"><input id="hActive" type="number" step="1" min="0" max="24"><span>h</span></div></div>
+          <div class="field"><label for="kwh">Prezzo energia</label><div class="inp"><input id="kwh" type="number" step="0.01" min="0" max="2"><span>€/kWh</span></div></div>
+          <div class="field"><label for="speed">Velocità rebuild</label><div class="inp"><input id="speed" type="number" step="10" min="10" max="2000"><span>MB/s</span></div></div>
+          <div class="field"><label for="years">Orizzonte costi</label><div class="inp"><input id="years" type="number" step="1" min="1" max="10"><span>anni</span></div></div>
+        </div>
+        <p class="hint" id="energyHint"></p>
+      </section>
+    </div>
+
+    <div class="col result">
+      <div class="total">
+        <div><div class="label" id="selName">Spazio utile</div><div class="big" id="bigUse">0</div></div>
+        <div class="meta" id="totMeta"></div>
+      </div>
+
+      <section class="card">
+        <h2>Come sono usati i dischi</h2>
+        <div class="disks" id="viz"></div>
+        <div class="legend">
+          <span><i class="c-data"></i>dati</span>
+          <span><i class="c-par"></i>parità</span>
+          <span><i class="c-mir"></i>copia mirror</span>
+          <span><i class="c-free"></i>non usato</span>
+        </div>
+        <div id="selWarns" class="col" style="gap:8px"></div>
+      </section>
+
+      <section class="card">
+        <h2>Spazio e costo</h2>
+        <div class="kvs" id="details"></div>
+      </section>
+
+      <section class="card">
+        <h2>Rischio in ricostruzione</h2>
+        <div id="riskBox"></div>
+      </section>
+
+      <section class="card">
+        <h2>Consumi <small id="wTot"></small></h2>
+        <div class="kvs" id="energy"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer><b>Come calcolo.</b> Lo spazio di ogni layout parte dai TB di targa (10<sup>12</sup> byte); 1 TiB = 2<sup>40</sup> byte, cioè 1 TB ≈ 0,909 TiB. RAID1/10, RAID5 e RAID6 classici (mdadm) usano su ogni disco solo la taglia del più piccolo: utile = (N − parità) × minimo, oppure N/2 × minimo per RAID10. SHR divide i dischi in strati alla quota di ogni taglia distinta: ogni strato con k dischi alto h rende (k − 1) × h in SHR-1 (con k ≥ 2) e (k − 2) × h in SHR-2 (con k ≥ 3), quindi in pratica il totale meno il disco più grande, o i due più grandi. In ZFS ogni vdev conta ogni disco quanto il più piccolo; i mirror ZFS accoppiano i dischi in ordine di taglia, un disco dispari resta fuori. RAIDZ ha in più un piccolo spreco di padding che dipende da recordsize e numero di dischi, qui non contato. Poi tolgo la riserva del filesystem (utile netto, usato per il €/TB) e la quota da tenere libera (spazio consigliato). Il rischio di ricostruzione è 1 − (1 − 1/URE)<sup>bit letti</sup>, sommando i bit da rileggere sui dischi superstiti nel caso peggiore, quando il layout non ha più ridondanza (dopo 1 guasto per mirror, RAID5, SHR-1, RAIDZ1; dopo 2 o 3 per le doppie e triple parità). Per ZFS conto solo lo spazio occupato, ipotizzato pari allo spazio consigliato, perché il resilver copia solo i blocchi in uso. Energia: (W attivi × ore attive + W idle × ore restanti) × 365.</footer>
+</div>
+
+<script>
+const EXAMPLES = [
+  {name:"4 × 8 TB", groups:[{n:4,tb:8,eur:230,wi:5,wa:7.5,ure:"1e15"}]},
+  {name:"2 × 8 TB, espandibile", groups:[{n:2,tb:8,eur:230,wi:5,wa:7.5,ure:"1e15"}]},
+  {name:"2 × 4 + 2 × 8 TB misti", groups:[{n:2,tb:4,eur:120,wi:4,wa:4.8,ure:"1e14"},{n:2,tb:8,eur:230,wi:5,wa:7.5,ure:"1e15"}]},
+  {name:"4 × 4 TB base", groups:[{n:4,tb:4,eur:120,wi:4,wa:4.8,ure:"1e14"}]},
+  {name:"6 × 16 TB", groups:[{n:6,tb:16,eur:330,wi:5.5,wa:8,ure:"1e15"}]}
+];
+const DEF = {
+  groups: structuredClone(EXAMPLES[0].groups),
+  sel:"zmirror", unit:"tb", reserve:3, keepFree:20,
+  hActive:4, kwh:0.30, speed:180, years:5
+};
+const KEY="raid-nas-v1";
+let S;
+S = Panda.load(KEY, DEF);
+Panda.share(() => S, DEF, KEY);
+if(!Array.isArray(S.groups)||!S.groups.length) S.groups=structuredClone(DEF.groups);
+function save(){ Panda.save(KEY, S); }
+const $=id=>document.getElementById(id);
+const nf0=new Intl.NumberFormat("it-IT",{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2=new Intl.NumberFormat("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const TIB = 1e12/2**40;               // 1 TB in TiB
+const toU = tb => S.unit==="tib" ? tb*TIB : tb;
+const U = () => S.unit==="tib" ? "TiB" : "TB";
+const cap = v => v>=100 ? nf0.format(v) : v>=10 ? nf1.format(v) : nf2.format(v);
+const capU = tb => cap(toU(tb))+" "+U();
+const capTB = tb => (tb>=100?nf0.format(tb):tb%1===0?nf0.format(tb):nf1.format(tb))+" TB";
+const pct = p => p<0.001 ? "< 0,1%" : p>0.999 ? "> 99,9%" : nf1.format(p*100)+"%";
+
+/* ---------- gruppi di dischi ---------- */
+function renderRows(){
+  const box=$("drows"); box.innerHTML="";
+  S.groups.forEach((g,i)=>{
+    const row=document.createElement("div"); row.className="drow";
+    row.innerHTML=`
+      <div class="field"><label for="gn${i}">Dischi</label><div class="inp"><input id="gn${i}" type="number" min="0" max="24" step="1" value="${g.n}"></div></div>
+      <div class="field"><label for="gt${i}">Taglia</label><div class="inp"><input id="gt${i}" type="number" min="0.5" step="1" value="${g.tb}"><span>TB</span></div></div>
+      <div class="field"><label for="ge${i}">Prezzo</label><div class="inp"><input id="ge${i}" type="number" min="0" step="5" value="${g.eur}"><span>€</span></div></div>
+      <div class="field"><label for="gi${i}">Idle</label><div class="inp"><input id="gi${i}" type="number" min="0" step="0.1" value="${g.wi}"><span>W</span></div></div>
+      <div class="field"><label for="ga${i}">Attivo</label><div class="inp"><input id="ga${i}" type="number" min="0" step="0.1" value="${g.wa}"><span>W</span></div></div>
+      <div class="field"><label for="gu${i}">URE</label><div class="inp"><select id="gu${i}"><option value="1e14">1 su 10¹⁴</option><option value="1e15">1 su 10¹⁵</option></select></div></div>
+      <button class="x" type="button" aria-label="Rimuovi gruppo" ${S.groups.length<2?"disabled":""}>×</button>`;
+    const q=s=>row.querySelector(s);
+    q("select").value=g.ure;
+    q("select").onchange=e=>{g.ure=e.target.value;calc();};
+    q(`#gn${i}`).oninput=e=>{g.n=Math.min(24,Math.max(0,Math.round(num(e.target.value))));calc();};
+    q(`#gt${i}`).oninput=e=>{g.tb=Math.max(0,num(e.target.value));calc();};
+    q(`#ge${i}`).oninput=e=>{g.eur=Math.max(0,num(e.target.value));calc();};
+    q(`#gi${i}`).oninput=e=>{g.wi=Math.max(0,num(e.target.value));calc();};
+    q(`#ga${i}`).oninput=e=>{g.wa=Math.max(0,num(e.target.value));calc();};
+    q(".x").onclick=()=>{S.groups.splice(i,1);renderRows();calc();};
+    box.appendChild(row);
+  });
+}
+$("addRow").onclick=()=>{ const l=S.groups[S.groups.length-1]; S.groups.push(l?{...l,n:2}:{n:2,tb:8,eur:230,wi:5,wa:7.5,ure:"1e15"}); renderRows(); calc(); };
+function renderExamples(){
+  const box=$("examples"); box.innerHTML="";
+  EXAMPLES.forEach(ex=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=ex.name;
+    b.onclick=()=>{S.groups=structuredClone(ex.groups); renderRows(); calc();};
+    box.appendChild(b);
+  });
+}
+
+/* elenco dei singoli dischi, dal più grande */
+function diskList(){
+  const D=[];
+  S.groups.forEach(g=>{ for(let k=0;k<g.n;k++) if(g.tb>0) D.push({tb:g.tb, ure:num(g.ure)||1e14, eur:g.eur}); });
+  D.sort((a,b)=>b.tb-a.tb);
+  return D;
+}
+
+/* ---------- layout ----------
+   Ogni layout è una lista di strati: {m:[indici dischi], h:TB per disco, use:TB utili, t:"stripe"|"mirror"|"parity"}
+   p = guasti tollerati con certezza (anche quanti guasti servono per restare senza ridondanza). */
+const LAYOUTS = [
+  {k:"stripe", name:"Stripe / JBOD", sub:"RAID0", fam:"raid"},
+  {k:"mirror", name:"Mirror", sub:"RAID1 / RAID10", fam:"raid"},
+  {k:"raid5", name:"RAID5", sub:"mdadm, 1 parità", fam:"raid"},
+  {k:"raid6", name:"RAID6", sub:"mdadm, 2 parità", fam:"raid"},
+  {k:"shr1", name:"SHR-1", sub:"Synology, 1 disco", fam:"shr"},
+  {k:"shr2", name:"SHR-2", sub:"Synology, 2 dischi", fam:"shr"},
+  {k:"zmirror", name:"ZFS mirror", sub:"vdev a coppie", fam:"zfs"},
+  {k:"z1", name:"RAIDZ1", sub:"ZFS, 1 parità", fam:"zfs"},
+  {k:"z2", name:"RAIDZ2", sub:"ZFS, 2 parità", fam:"zfs"},
+  {k:"z3", name:"RAIDZ3", sub:"ZFS, 3 parità", fam:"zfs"}
+];
+function build(L, D){
+  const N=D.length, idx=D.map((_,i)=>i), min=N?Math.min(...D.map(d=>d.tb)):0;
+  const r={...L, layers:[], p:0, valid:true, why:"", notes:[], groups:1};
+  const need=(n,msg)=>{ if(N<n){ r.valid=false; r.why=msg||`Servono almeno ${n} dischi`; } };
+  const parity=(p,minN)=>{ need(minN); r.p=p; if(r.valid) r.layers=[{m:idx,h:min,use:(N-p)*min,t:"parity"}]; };
+  switch(L.k){
+    case "stripe":
+      need(1,"Nessun disco");
+      r.layers=idx.map(i=>({m:[i],h:D[i].tb,use:D[i].tb,t:"stripe"}));
+      r.notes.push("Nessuna ridondanza: un disco guasto e perdi tutto lo stripe (in JBOD i dati di quel disco).");
+      break;
+    case "mirror":
+      r.sub = N===2 ? "RAID1" : N>=4 ? "RAID10" : "RAID1 / RAID10";
+      if(N<2) need(2);
+      else if(N%2){ r.valid=false; r.why="Serve un numero pari di dischi (coppie)"; }
+      else {
+        r.p=1; r.groups=N/2;
+        for(let i=0;i<N;i+=2) r.layers.push({m:[i,i+1],h:min,use:min,t:"mirror"});
+        if(N>=4) r.notes.push(`RAID10 regge 1 guasto qualsiasi, fino a ${N/2} se cadono in coppie diverse.`);
+      }
+      break;
+    case "raid5": parity(1,3); break;
+    case "raid6": parity(2,4); break;
+    case "z1": parity(1,3); break;
+    case "z2": parity(2,4); break;
+    case "z3": parity(3,5); break;
+    case "shr1": case "shr2": {
+      const p = L.k==="shr1"?1:2, minK=p+1;
+      need(L.k==="shr1"?2:4);
+      r.p=p;
+      if(r.valid){
+        const sizes=[...new Set(D.map(d=>d.tb))].sort((a,b)=>a-b);
+        let prev=0;
+        sizes.forEach(s=>{
+          const m=idx.filter(i=>D[i].tb>=s), h=s-prev; prev=s;
+          if(m.length>=minK) r.layers.push({m,h,use:(m.length-p)*h,t:m.length===2?"mirror":"parity"});
+        });
+        r.notes.push("Disponibile solo su Synology DSM (mdadm + LVM).");
+      }
+      break;
+    }
+    case "zmirror":
+      need(2);
+      if(r.valid){
+        r.p=1; r.groups=Math.floor(N/2);
+        for(let i=0;i+1<N;i+=2) r.layers.push({m:[i,i+1],h:Math.min(D[i].tb,D[i+1].tb),use:Math.min(D[i].tb,D[i+1].tb),t:"mirror"});
+        if(N%2) r.notes.push(`Numero dispari: il disco da ${capTB(D[N-1].tb)} resta fuori (usalo come spare o backup).`);
+        if(r.groups>1) r.notes.push(`${r.groups} vdev mirror in stripe: regge 1 guasto qualsiasi, fino a ${r.groups} se cadono in coppie diverse. Si espande aggiungendo un'altra coppia.`);
+      }
+      break;
+  }
+  const raw=D.reduce((a,d)=>a+d.tb,0);
+  r.raw=raw;
+  r.use=r.layers.reduce((a,l)=>a+l.use,0);
+  r.alloc=r.layers.reduce((a,l)=>a+l.h*l.m.length,0);
+  r.waste=r.valid? Math.max(0,raw-r.alloc) : 0;
+  if(r.valid && r.waste>0.001 && L.k!=="stripe"){
+    const why = L.fam==="zfs" ? "ZFS conta ogni disco del vdev quanto il più piccolo" : L.fam==="shr" ? "lo spazio del disco più grande non ha un compagno per la ridondanza" : "il RAID classico usa su ogni disco solo la taglia del più piccolo";
+    r.notes.push(`${capTB(r.waste)} lordi restano inutilizzati: ${why}.`);
+  }
+  if(r.valid && (L.k==="raid5"||L.k==="z1") && min>=8) r.notes.push("Con dischi da 8 TB in su la parità singola è sconsigliata: la ricostruzione dura molte ore e rilegge tutti gli altri dischi.");
+  if(r.valid && L.k==="z1" ) r.notes.push("Da OpenZFS 2.3 puoi aggiungere un disco al RAIDZ, ma i dati già scritti mantengono il vecchio rapporto dati/parità finché non li riscrivi.");
+  return r;
+}
+
+/* ---------- rischio URE ---------- */
+function combos(n,k){ const out=[], c=[]; (function rec(s){ if(c.length===k){out.push(c.slice());return;} for(let i=s;i<n;i++){c.push(i);rec(i+1);c.pop();} })(0); return out; }
+function risk(r, D, fill){
+  if(!r.valid || r.p===0) return null;
+  let best={P:0,bits:0,F:null};
+  combos(D.length, r.p).forEach(F=>{
+    let logS=0, bits=0;
+    r.layers.forEach(l=>{
+      if(!F.every(f=>l.m.includes(f))) return;            // in questo strato resta ridondanza
+      l.m.forEach(i=>{ if(F.includes(i)) return;
+        const b=l.h*fill*8e12; bits+=b; logS+=b*Math.log1p(-1/D[i].ure); });
+    });
+    const P=-Math.expm1(logS);
+    if(P>best.P || (P===best.P && bits>best.bits)) best={P,bits,F};
+  });
+  // tempo: dati da scrivere sul disco sostitutivo più carico
+  let wr=0; D.forEach((_,i)=>{ let s=0; r.layers.forEach(l=>{ if(l.m.includes(i)) s+=l.h; }); wr=Math.max(wr,s*fill); });
+  best.hours = wr*1e12/(Math.max(1,S.speed)*1e6)/3600;
+  best.wr=wr;
+  return best;
+}
+
+/* ---------- controlli ---------- */
+function seg(id,key){
+  $(id).querySelectorAll("button").forEach(b=>{
+    b.setAttribute("aria-pressed", S[key]===b.dataset.v);
+    b.onclick=()=>{S[key]=b.dataset.v; seg(id,key); calc();};
+  });
+}
+const SIMPLE=["reserve","keepFree","hActive","kwh","speed","years"];
+function fillInputs(){ SIMPLE.forEach(k=>{ $(k).value=S[k]; }); }
+SIMPLE.forEach(k=>$(k).addEventListener("input",e=>{ S[k]=num(e.target.value); calc(); }));
+
+/* ---------- calcolo ---------- */
+function calc(){
+  save();
+  const D=diskList(), N=D.length;
+  const raw=D.reduce((a,d)=>a+d.tb,0), cost=D.reduce((a,d)=>a+d.eur,0);
+  const res=Math.min(0.9,Math.max(0,S.reserve/100)), free=Math.min(0.9,Math.max(0,S.keepFree/100));
+  $("diskTot").textContent = `${N} ${N===1?"disco":"dischi"} · ${capTB(raw)} lordi`;
+  $("costTot").textContent = `totale ${nf0.format(cost)} €`;
+
+  const R=LAYOUTS.map(L=>build(L,D));
+  R.forEach(r=>{ r.net=r.use*(1-res); r.rec=r.net*(1-free); r.eurU = r.net>0 ? cost/toU(r.net) : null; });
+  if(!R.find(r=>r.k===S.sel)) S.sel="zmirror";
+  const valids=R.filter(r=>r.valid && r.p>0);
+  const cheapest = valids.length ? valids.reduce((a,b)=>b.eurU<a.eurU?b:a) : null;
+
+  // tabella
+  const other = tb => S.unit==="tib" ? capTB(tb) : cap(tb*TIB)+" TiB";
+  let h=`<thead><tr><th>Layout</th><th class="n">Utile</th><th class="n">Effic.</th><th class="n">Guasti</th><th class="n">€/${U()}</th></tr></thead><tbody>`;
+  R.forEach(r=>{
+    const sel=r.k===S.sel;
+    const name=`<div class="ln">${r.name}${cheapest&&r===cheapest?'<span class="best" title="Il €/TB più basso tra i layout con ridondanza">top €</span>':""}</div><small>${r.sub}</small>`;
+    if(!r.valid){
+      h+=`<tr class="bad" data-k="${r.k}" tabindex="0" aria-selected="${sel}"><td>${name}</td><td colspan="4" class="why">${r.why}</td></tr>`;
+    } else {
+      const faults = r.p===0 ? "0" : (r.groups>1 && r.p===1) ? `1<small>fino a ${r.groups}</small>` : String(r.p);
+      h+=`<tr data-k="${r.k}" tabindex="0" aria-selected="${sel}"><td>${name}</td>
+        <td class="n"><b>${capU(r.net)}</b><small>${other(r.net)}</small></td>
+        <td class="n">${nf0.format(r.raw?r.use/r.raw*100:0)}%</td>
+        <td class="n">${faults}</td>
+        <td class="n">${r.eurU===null?"–":nf0.format(r.eurU)}</td></tr>`;
+    }
+  });
+  $("cmp").innerHTML=h+"</tbody>";
+  $("cmp").querySelectorAll("tbody tr").forEach(tr=>{
+    const pick=()=>{S.sel=tr.dataset.k; calc(); };
+    tr.onclick=pick;
+    tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pick(); const n=$("cmp").querySelector(`tr[data-k="${S.sel}"]`); n&&n.focus(); } };
+  });
+  $("cmpNotes").innerHTML = `<p class="hint">Utile al netto della riserva filesystem (${nf1.format(res*100)}%), sotto nell'altra unità. Efficienza = spazio del layout sul lordo. Guasti = dischi che puoi perdere con certezza. €/${U()} sul prezzo dei soli dischi.</p>`;
+
+  // layout scelto
+  const r=R.find(x=>x.k===S.sel);
+  $("selName").textContent = `${r.name} · ${r.sub}`;
+  if(r.valid){
+    $("bigUse").innerHTML = cap(toU(r.net))+`<span> ${U()}</span>`;
+    $("totMeta").innerHTML = `consigliati ${capU(r.rec)}<br>su ${capU(raw)} lordi`;
+  } else {
+    $("bigUse").innerHTML = "–";
+    $("totMeta").innerHTML = r.why;
+  }
+
+  // disegno
+  const maxTB=Math.max(1,...D.map(d=>d.tb));
+  $("viz").innerHTML = D.map((d,i)=>{
+    let segs="", used=0;
+    if(r.valid) r.layers.forEach(l=>{
+      if(!l.m.includes(i)) return;
+      used+=l.h;
+      const H=l.h/maxTB*100;
+      let parts;
+      if(l.t==="stripe") parts=`<i class="c-data" style="flex:1"></i>`;
+      else if(l.t==="mirror") parts = l.m[0]===i ? `<i class="c-data" style="flex:1"></i>` : `<i class="c-mir" style="flex:1"></i>`;
+      else { const k=l.m.length, dataF=l.use/(k*l.h); parts=`<i class="c-data" style="flex:${dataF}"></i><i class="c-par" style="flex:${1-dataF}"></i>`; }
+      segs+=`<div class="s" style="height:${H}%">${parts}</div>`;
+    });
+    const freeH=(d.tb-used)/maxTB*100, voidH=(maxTB-d.tb)/maxTB*100;
+    if(freeH>0.01) segs+=`<div class="s c-free" style="height:${freeH}%"></div>`;
+    return `<div class="dk" title="Disco ${i+1}: ${capTB(d.tb)}"><div class="body">${segs}${voidH>0.01?`<div class="c-void" style="height:${voidH}%"></div>`:""}</div><div class="cap">${d.tb%1===0?d.tb:nf1.format(d.tb)}</div></div>`;
+  }).join("") || `<p class="hint">Aggiungi almeno un disco.</p>`;
+  $("selWarns").innerHTML = (r.valid ? r.notes : [r.why]).map((n,i)=>`<div class="${(!r.valid||/inutilizzati|Nessuna ridondanza|sconsigliata|fuori/.test(n))?"warn":"hint"}">${n}</div>`).join("");
+
+  // dettagli
+  const kv=(k,v,cls="")=>`<div class="kv ${cls}"><span>${k}</span><b>${v}</b></div>`;
+  if(r.valid){
+    const yearsE = energy(D).eur*Math.max(1,S.years);
+    $("details").innerHTML =
+      kv("Lordo", capU(raw)) +
+      kv("Spazio del layout", capU(r.use)+` · ${nf0.format(r.raw?r.use/r.raw*100:0)}%`) +
+      (r.waste>0.001?kv("Non usato (taglie miste)", capU(r.waste)):"") +
+      kv(`Riserva filesystem ${nf1.format(res*100)}%`, "− "+capU(r.use*res)) +
+      kv("Utile netto", capU(r.net), "hl") +
+      kv(`Da tenere libero ${nf0.format(free*100)}%`, "− "+capU(r.net*free)) +
+      kv("Spazio consigliato", capU(r.rec), "hl") +
+      kv("Guasti tollerati", r.p===0?"nessuno":(r.groups>1&&r.p===1)?`1 (fino a ${r.groups})`:`${r.p} qualsiasi`) +
+      kv("Costo dischi", nf0.format(cost)+" €") +
+      kv(`€/${U()} utile`, r.eurU===null?"–":nf2.format(r.eurU)+" €") +
+      kv(`€/${U()} consigliato`, r.rec>0?nf2.format(cost/toU(r.rec))+" €":"–") +
+      kv(`Dischi + energia in ${nf0.format(Math.max(1,S.years))} anni`, nf0.format(cost+yearsE)+" €");
+  } else $("details").innerHTML = `<p class="hint">${r.why}: scegli un altro layout o aggiungi dischi.</p>`;
+
+  // rischio
+  const zfs=r.fam==="zfs", fill = zfs ? (1-free) : 1;
+  const rk=risk(r,D,fill);
+  if(!r.valid) $("riskBox").innerHTML = `<p class="hint">Layout non valido con questi dischi.</p>`;
+  else if(!rk) $("riskBox").innerHTML = `<p class="hint">Senza ridondanza non c'è ricostruzione: con un disco guasto i dati vanno recuperati dal backup.</p>`;
+  else {
+    const hi=rk.P>=0.2, lo=rk.P<0.05;
+    const after = r.p===1 ? "dopo 1 disco guasto" : `con ${r.p} dischi guasti insieme`;
+    $("riskBox").innerHTML =
+      `<div><div class="label">Probabilità di almeno una URE ${after}</div><div class="risk ${hi?"hi":lo?"lo":""}">${pct(rk.P)}</div></div>`+
+      `<div class="kvs">`+
+      kv("Da rileggere sui superstiti", capTB(rk.bits/8e12)) +
+      kv("Da scrivere sul disco nuovo", capTB(rk.wr)) +
+      kv(`Durata stimata a ${nf0.format(S.speed)} MB/s`, rk.hours<1?"< 1 h":`~${rk.hours<10?nf1.format(rk.hours):nf0.format(rk.hours)} h`) +
+      `</div>`+
+      (r.p>1?`<p class="hint">Con ${r.p===2?"doppia":"tripla"} parità, finché manca un solo disco una URE viene corretta dalla parità residua: il rischio sopra vale solo se perdi ${r.p} dischi prima di finire la ricostruzione.</p>`:"")+
+      (zfs?`<p class="hint">ZFS rilegge solo i blocchi occupati (qui ipotizzati al ${nf0.format(fill*100)}%, lo spazio consigliato) e grazie ai checksum una URE rovina al massimo un file, non l'intero pool.</p>`:
+        `<p class="hint">mdadm e SHR rileggono tutta l'area RAID dei dischi superstiti, anche se vuota. Una URE di solito costa un settore o un file, non necessariamente l'array, ma va verificato con uno scrub.</p>`)+
+      `<p class="hint">Stima pessimistica da scheda tecnica: 10<sup>14</sup> o 10<sup>15</sup> è un limite massimo dichiarato, nella pratica i dischi sani sbagliano molto meno. Serve per confrontare i layout, non come previsione. Lo scrub periodico abbassa il rischio reale.</p>`;
+  }
+
+  // energia
+  const E=energy(D);
+  $("wTot").textContent = `${nf1.format(E.wi)} W idle · ${nf1.format(E.wa)} W attivi`;
+  $("energy").innerHTML =
+    kv("Potenza media", nf1.format(E.kwhY*1000/8760)+" W") +
+    kv("Energia all'anno", nf0.format(E.kwhY)+" kWh") +
+    kv("Costo all'anno", nf0.format(E.eur)+" €", "hl") +
+    kv("Costo al mese", nf2.format(E.eur/12)+" €") +
+    (r.valid && r.net>0 ? kv(`Energia per ${U()} utile all'anno`, nf2.format(E.eur/toU(r.net))+" €") : "");
+  const ha=Math.min(24,Math.max(0,S.hActive));
+  $("energyHint").textContent = `${nf0.format(ha)} h attive e ${nf0.format(24-ha)} h in idle al giorno, per tutti i dischi (lo spin-down abbassa ancora i consumi idle ma non è contato). Velocità rebuild: 150 a 250 MB/s per HDD da 3,5" moderni, meno se il NAS resta in uso durante la ricostruzione.`;
+}
+function energy(D){
+  const ha=Math.min(24,Math.max(0,S.hActive));
+  let wi=0, wa=0;
+  S.groups.forEach(g=>{ if(g.tb>0){ wi+=g.n*g.wi; wa+=g.n*g.wa; } });
+  const kwhY=(wa*ha + wi*(24-ha))*365/1000;
+  return {wi,wa,kwhY,eur:kwhY*Math.max(0,S.kwh)};
+}
+
+renderExamples(); renderRows(); fillInputs(); seg("unit","unit"); calc();
+</script>
+</body>
+</html>

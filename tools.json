@@ -3,7 +3,54 @@
     "slug": "impasto-teglia",
     "name": "Impasto in teglia",
     "description": "Calcolatore per pizza in teglia: teglie multiple, stili, lievito in base a tempi e temperature, biga e poolish, temperatura dell'acqua e programma.",
-    "tags": ["cucina", "pizza"],
+    "tags": [
+      "cucina",
+      "pizza"
+    ],
     "emoji": "🍕"
+  },
+  {
+    "slug": "sushi",
+    "name": "Sushi fatto in casa",
+    "description": "Pianificatore per sushi in casa: pezzi per persona, mix di hosomaki, uramaki, nigiri e temaki, riso crudo e acqua, sushi-zu, lista della spesa con nori e pesce abbattuto, e programma fino a tavola.",
+    "tags": [
+      "cucina",
+      "giappone"
+    ],
+    "emoji": "🍣"
+  },
+  {
+    "slug": "raid-nas",
+    "name": "Dischi e RAID",
+    "description": "Calcolatore per NAS: spazio utile in TB e TiB, efficienza e €/TB per RAID0/1/10/5/6, SHR-1/2, mirror ZFS e RAIDZ1/2/3 anche con dischi misti, consumi e costo annuo, rischio URE e durata della ricostruzione.",
+    "tags": [
+      "nas",
+      "storage",
+      "hardware"
+    ],
+    "emoji": "💽"
+  },
+  {
+    "slug": "glossario-oracle",
+    "name": "Glossario Oracle",
+    "description": "Metriche Oracle (cursori, parse, cache di sessione, v$sysmetric) spiegate, con confronto PostgreSQL, SQL Server e MySQL.",
+    "tags": [
+      "database",
+      "oracle",
+      "monitoraggio"
+    ],
+    "emoji": "📖"
+  },
+  {
+    "slug": "nmap-comandi",
+    "name": "Comandi nmap",
+    "description": "Costruisci i comandi nmap per scansionare la tua rete a fasi (scoperta, porte, servizi, UDP, IPv6, script, confronto con ndiff), in Bash o PowerShell, con spiegazione dei flag e avvisi su combinazioni lente o rumorose.",
+    "tags": [
+      "rete",
+      "sicurezza",
+      "nmap",
+      "homelab"
+    ],
+    "emoji": "📡"
   }
 ]

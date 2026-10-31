@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sushi fatto in casa · PandaToolkit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
+<link rel="stylesheet" href="../assets/panda.css">
+<script src="../assets/panda.js"></script>
+<style>
+/* Layout: scheda di lavoro a due colonne, parametri a sinistra e piano calcolato a destra (sticky), una colonna su telefono.
+   Colori, font e controlli comuni stanno in ../assets/panda.css */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* preparazioni */
+.preps{display:flex;flex-direction:column}
+.prep{padding:10px 0;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:8px}
+.prep:first-child{border-top:0;padding-top:0}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 96px 132px;gap:10px;align-items:center}
+.prow .name{font-weight:600;font-size:14px;min-width:0}
+.prow .name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.prow .tag{justify-self:end;white-space:nowrap}
+.prep.off .name{color:var(--muted)}
+details.params summary{font-size:12.5px;color:var(--muted);cursor:pointer;width:max-content}
+details.params summary:hover{color:var(--accent)}
+details.params .fields{margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+@media (max-width:420px){.prow{grid-template-columns:minmax(0,1fr) 86px}.prow .tag{grid-column:1/-1;justify-self:start}}
+
+/* ripieni */
+.fills{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.fills .field label{display:flex;justify-content:space-between;gap:6px}
+.fills .field label b{font-family:var(--f-num);font-weight:400;font-size:11.5px}
+
+/* risultati */
+.result{position:sticky;top:16px}
+@media (max-width:880px){.result{position:static}}
+td.p{text-align:right;font-family:var(--f-num);color:var(--muted);font-size:12.5px}
+td small{display:block;color:var(--muted);font-size:12px}
+tr.sum td{font-weight:600;border-bottom:0}
+tr.grp td{font-family:var(--f-display);font-weight:700;font-size:14px;color:var(--accent);padding-top:12px}
+.tblwrap{overflow-x:auto}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.tl li:last-child{border-bottom:0}
+.tl .t{font-family:var(--f-num);font-size:13px;font-variant-numeric:tabular-nums}
+.tl .t small{display:block;color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← PandaToolkit</a>
+  <header>
+    <h1>Sushi fatto in casa</h1>
+    <p>Quanti pezzi, quanto riso, quanto sushi-zu e cosa comprare: scegli persone e preparazioni, il piano e il programma si ricalcolano mentre scrivi.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2>Quanto sushi</h2>
+        <div class="seg" id="mode" role="group" aria-label="Come contare i pezzi">
+          <button type="button" data-v="auto">Da persone e appetito</button>
+          <button type="button" data-v="fixed">Pezzi fissi</button>
+        </div>
+        <div class="fields">
+          <div class="field"><label for="people">Persone</label><div class="inp"><input id="people" type="number" step="1" min="1" max="60"><span>pers.</span></div></div>
+          <div class="field" id="ppField"><label for="pp">Pezzi a testa</label><div class="inp"><input id="pp" type="number" step="1" min="4" max="60"><span>pz</span></div></div>
+          <div class="field" id="piecesField"><label for="pieces">Pezzi totali</label><div class="inp"><input id="pieces" type="number" step="1" min="1" max="2000"><span>pz</span></div></div>
+        </div>
+        <div id="appWrap">
+          <div class="label" style="margin-bottom:6px">Appetito</div>
+          <div class="seg" id="appetite" role="group" aria-label="Appetito">
+            <button type="button" data-v="leggero">Leggero · 12</button>
+            <button type="button" data-v="normale">Normale · 18</button>
+            <button type="button" data-v="abbondante">Abbondante · 24</button>
+          </div>
+        </div>
+        <p class="hint" id="qtyHint"></p>
+      </section>
+
+      <section class="card">
+        <h2>Preparazioni <small id="mixSum"></small></h2>
+        <div class="chips" id="mixPresets"></div>
+        <div class="preps" id="preps"></div>
+        <p class="hint">La percentuale è la quota di pezzi. Il numero di rotoli si arrotonda all'intero più vicino (almeno uno se la quota è sopra zero). Temaki e onigiri contano come un pezzo ma saziano quanto 3 o 4 pezzi di maki. Apri "Parametri" per cambiare riso, ripieno e nori per unità.</p>
+      </section>
+
+      <section class="card">
+        <h2>Ripieni e pesce <small id="fillTot"></small></h2>
+        <div class="chips" id="fillChips"></div>
+        <div class="fills" id="fills"></div>
+        <p class="hint" id="fillHint"></p>
+      </section>
+
+      <section class="card">
+        <h2>Riso</h2>
+        <div class="fields">
+          <div class="field"><label for="yield">Resa cottura</label><div class="inp"><input id="yield" type="number" step="0.05" min="1.8" max="2.8"><span>× crudo</span></div></div>
+          <div class="field"><label for="water">Acqua</label><div class="inp"><input id="water" type="number" step="0.05" min="0.9" max="1.5"><span>× crudo</span></div></div>
+          <div class="field"><label for="margin">Margine</label><div class="inp"><input id="margin" type="number" step="1" min="0" max="50"><span>%</span></div></div>
+        </div>
+        <p class="hint">Riso giapponese a chicco tondo (tipo Koshihikari o "riso per sushi"); in alternativa un Originario italiano. 100 g di crudo danno circa 220 g di cotto. L'acqua è sul peso del riso crudo, misurata dopo averlo lavato e scolato bene: 1,1 per riso nuovo o molto ammollato, 1,2 di base. I grammi di riso delle preparazioni sono di riso già condito.</p>
+      </section>
+
+      <section class="card">
+        <h2>Sushi-zu</h2>
+        <div class="chips" id="zuPresets"></div>
+        <div class="fields">
+          <div class="field"><label for="vin">Aceto di riso</label><div class="inp"><input id="vin" type="number" step="0.5" min="0" max="25"><span>%</span></div></div>
+          <div class="field"><label for="sug">Zucchero</label><div class="inp"><input id="sug" type="number" step="0.5" min="0" max="15"><span>%</span></div></div>
+          <div class="field"><label for="salt">Sale</label><div class="inp"><input id="salt" type="number" step="0.1" min="0" max="5"><span>%</span></div></div>
+        </div>
+        <p class="hint">Percentuali sul peso del riso crudo. Scalda aceto, zucchero e sale finché si sciolgono senza far bollire, poi lascia intiepidire. Con l'aceto per sushi già condito metti zucchero e sale a zero.</p>
+      </section>
+
+      <section class="card">
+        <h2>Tempi</h2>
+        <div class="fields">
+          <div class="field"><label for="soak">Ammollo e scolatura</label><div class="inp"><input id="soak" type="number" step="5" min="0" max="120"><span>min</span></div></div>
+          <div class="field"><label for="cook">Cottura</label><div class="inp"><input id="cook" type="number" step="1" min="5" max="40"><span>min</span></div></div>
+          <div class="field"><label for="rest">Riposo coperto</label><div class="inp"><input id="rest" type="number" step="1" min="0" max="30"><span>min</span></div></div>
+          <div class="field"><label for="cool">Condire e intiepidire</label><div class="inp"><input id="cool" type="number" step="5" min="10" max="90"><span>min</span></div></div>
+          <div class="field"><label for="rollMin">Per ogni rotolo</label><div class="inp"><input id="rollMin" type="number" step="1" min="1" max="20"><span>min</span></div></div>
+        </div>
+        <p class="hint">Cottura in pentola dal bollore, fuoco al minimo e coperchio chiuso; con il cuociriso conta il tempo del programma. Per nigiri e gunkan il programma conta un minuto e mezzo a pezzo, i temaki si arrotolano a tavola.</p>
+      </section>
+    </div>
+
+    <div class="col result">
+      <div class="total">
+        <div><div class="label">Pezzi totali</div><div class="big" id="piecesTot">0<span> pz</span></div></div>
+        <div class="meta" id="totMeta"></div>
+      </div>
+
+      <section class="card">
+        <h2>Riso</h2>
+        <div id="warns"></div>
+        <div class="tblwrap" id="riceTbl"></div>
+      </section>
+
+      <section class="card">
+        <h2>Sushi-zu</h2>
+        <div class="tblwrap" id="zuTbl"></div>
+      </section>
+
+      <section class="card">
+        <h2>Lista della spesa</h2>
+        <div class="tblwrap" id="shop"></div>
+        <div class="warn"><b>Pesce crudo:</b> deve essere abbattuto, cioè congelato a −20 °C per almeno 24 ore (o −35 °C per 15 ore) contro l'anisakis, come prevede il Reg. CE 853/2004. Compralo già abbattuto e dichiarato tale in etichetta o dal pescivendolo; il freezer di casa di solito non garantisce −20 °C a cuore. Scongela in frigo e tieni tutto al freddo fino al momento di servire.</div>
+      </section>
+
+      <section class="card">
+        <h2>Per preparazione</h2>
+        <div class="tblwrap" id="perPrep"></div>
+      </section>
+
+      <section class="card">
+        <h2>Programma</h2>
+        <div class="field"><label for="serveAt">A tavola</label><div class="inp"><input id="serveAt" type="datetime-local"></div></div>
+        <ul class="tl" id="timeline"></ul>
+      </section>
+    </div>
+  </div>
+
+  <footer>Valori indicativi da ricette casalinghe e di sushi bar: un hosomaki usa mezzo foglio di nori e 80 a 90 g di riso, un uramaki 120 a 160 g, un nigiri 18 a 20 g di riso e 10 a 12 g di pesce. Il riso condito pesa il cotto più il sushi-zu, quindi il crudo si ricava dividendo per la resa più la quota di condimento. Nori in fogli interi da circa 19 × 21 cm.</footer>
+</div>
+
+<script>
+const PREPS = {
+  hosomaki:{name:"Hosomaki",desc:"rotolino sottile, 1 ripieno",unit:"rotoli",ppu:6,rice:85,fill:25,nori:0.5,sesame:0,roll:true},
+  uramaki:{name:"Uramaki / California",desc:"riso fuori, nori dentro",unit:"rotoli",ppu:8,rice:140,fill:55,nori:0.5,sesame:5,roll:true},
+  futomaki:{name:"Futomaki",desc:"rotolo grande, più ripieni",unit:"rotoli",ppu:8,rice:200,fill:110,nori:1,sesame:0,roll:true},
+  nigiri:{name:"Nigiri",desc:"polpetta di riso e fetta di pesce",unit:"pz",ppu:1,rice:20,fill:11,nori:0,sesame:0},
+  gunkan:{name:"Gunkan",desc:"barchetta di nori farcita",unit:"pz",ppu:1,rice:20,fill:15,nori:0.17,sesame:0},
+  temaki:{name:"Temaki",desc:"cono di nori, a tavola",unit:"pz",ppu:1,rice:50,fill:35,nori:0.5,sesame:0},
+  onigiri:{name:"Onigiri",desc:"triangolo di riso, facoltativo",unit:"pz",ppu:1,rice:100,fill:20,nori:0.33,sesame:0}
+};
+const MIXES = {
+  classico:{name:"Misto classico",mix:{hosomaki:30,uramaki:35,futomaki:0,nigiri:20,gunkan:10,temaki:5,onigiri:0}},
+  facile:{name:"Primo sushi",mix:{hosomaki:40,uramaki:40,futomaki:0,nigiri:0,gunkan:0,temaki:20,onigiri:0}},
+  maki:{name:"Solo maki",mix:{hosomaki:45,uramaki:40,futomaki:15,nigiri:0,gunkan:0,temaki:0,onigiri:0}},
+  nigiri:{name:"Tanti nigiri",mix:{hosomaki:20,uramaki:20,futomaki:0,nigiri:50,gunkan:10,temaki:0,onigiri:0}},
+  festa:{name:"Festa",mix:{hosomaki:20,uramaki:25,futomaki:10,nigiri:20,gunkan:10,temaki:10,onigiri:5}}
+};
+/* buy: fattore per lo scarto di pulizia; per: grammi utili per unità d'acquisto */
+const FILLS = {
+  salmone:{name:"Salmone",raw:true,buy:1.15,note:"filetto senza pelle, abbattuto"},
+  tonno:{name:"Tonno",raw:true,buy:1.1,note:"trancio, abbattuto"},
+  gambero:{name:"Gambero cotto",per:12,perName:["gambero","gamberi"],note:"sgusciati, o in tempura"},
+  avocado:{name:"Avocado",per:140,perName:["avocado","avocado"],note:"maturo, polpa utile"},
+  cetriolo:{name:"Cetriolo",per:150,perName:["cetriolo","cetrioli"],note:"senza semi, a bastoncini"},
+  philadelphia:{name:"Philadelphia",per:150,perName:["vaschetta da 150 g","vaschette da 150 g"],note:"formaggio spalmabile"},
+  surimi:{name:"Surimi",per:16,perName:["bastoncino","bastoncini"],note:"già cotto"},
+  tamago:{name:"Tamagoyaki",per:50,perName:["uovo","uova"],note:"frittata dolce arrotolata"},
+  mango:{name:"Mango",per:300,perName:["mango","manghi"],note:"maturo ma sodo"},
+  branzino:{name:"Branzino / orata",raw:true,buy:1.2,note:"filetto, abbattuto"}
+};
+const ZU = {
+  classico:{name:"Classico",vin:12,sug:5,salt:2},
+  kanto:{name:"Kanto (meno dolce)",vin:12,sug:3,salt:2.5},
+  kansai:{name:"Kansai (più dolce)",vin:12,sug:8,salt:1.5},
+  pronto:{name:"Aceto già condito",vin:15,sug:0,salt:0}
+};
+const APP = {leggero:12,normale:18,abbondante:24};
+
+const defPreps = () => Object.fromEntries(Object.entries(PREPS).map(([k,p])=>[k,{pct:MIXES.classico.mix[k],ppu:p.ppu,rice:p.rice,fill:p.fill,nori:p.nori}]));
+const DEF = {
+  mode:"auto", people:4, appetite:"normale", pp:18, pieces:72,
+  mixPreset:"classico", preps:defPreps(),
+  fills:{salmone:{on:true,pct:35},tonno:{on:true,pct:15},gambero:{on:true,pct:10},avocado:{on:true,pct:15},cetriolo:{on:true,pct:10},philadelphia:{on:true,pct:10},surimi:{on:true,pct:5},tamago:{on:false,pct:10},mango:{on:false,pct:10},branzino:{on:false,pct:10}},
+  yield:2.2, water:1.2, margin:0,
+  zuPreset:"classico", ...ZU.classico,
+  soak:30, cook:15, rest:10, cool:30, rollMin:6,
+  serveAt:""
+};
+delete DEF.name;
+let S;
+S = Panda.load("sushi-v1", DEF);
+Panda.share(() => S, DEF, "sushi-v1");
+if(!S.serveAt || isNaN(new Date(S.serveAt))){ const d=new Date(); if(d.getHours()>=17) d.setDate(d.getDate()+1); d.setHours(20,0,0,0); S.serveAt=toLocalInput(d); }
+function save(){ Panda.save("sushi-v1", S); }
+function toLocalInput(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+const $=id=>document.getElementById(id);
+const nf0=new Intl.NumberFormat("it-IT",{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2=new Intl.NumberFormat("it-IT",{maximumFractionDigits:2});
+const g = v => v < 10 ? nf1.format(v) : nf0.format(v);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const r10 = v => Math.ceil(v/10)*10;
+
+/* ---------- preparazioni ---------- */
+function renderPreps(){
+  const box=$("preps"); box.innerHTML="";
+  Object.entries(PREPS).forEach(([k,p])=>{
+    const s=S.preps[k], row=document.createElement("div");
+    row.className="prep"; row.dataset.k=k;
+    row.innerHTML=`
+      <div class="prow">
+        <div class="name">${p.name}<small>${p.desc}</small></div>
+        <div class="inp"><input data-f="pct" type="number" min="0" max="100" step="5" value="${s.pct}" aria-label="Quota ${p.name}"><span>%</span></div>
+        <span class="tag" data-out></span>
+      </div>
+      <details class="params"><summary>Parametri</summary>
+        <div class="fields">
+          <div class="field"><label for="pu_${k}">Pezzi per ${p.roll?"rotolo":"unità"}</label><div class="inp"><input id="pu_${k}" data-f="ppu" type="number" min="1" max="12" step="1" value="${s.ppu}"><span>pz</span></div></div>
+          <div class="field"><label for="ri_${k}">Riso condito</label><div class="inp"><input id="ri_${k}" data-f="rice" type="number" min="0" max="400" step="5" value="${s.rice}"><span>g</span></div></div>
+          <div class="field"><label for="fi_${k}">${k==="nigiri"?"Pesce":"Ripieno"}</label><div class="inp"><input id="fi_${k}" data-f="fill" type="number" min="0" max="300" step="1" value="${s.fill}"><span>g</span></div></div>
+          <div class="field"><label for="no_${k}">Nori</label><div class="inp"><input id="no_${k}" data-f="nori" type="number" min="0" max="2" step="0.05" value="${s.nori}"><span>fogli</span></div></div>
+        </div>
+      </details>`;
+    row.querySelectorAll("input").forEach(inp=>{
+      inp.oninput=e=>{ s[inp.dataset.f]=num(e.target.value); if(inp.dataset.f==="pct"){ S.mixPreset=""; renderMixPresets(); } calc(); };
+    });
+    box.appendChild(row);
+  });
+}
+function renderMixPresets(){
+  const box=$("mixPresets"); box.innerHTML="";
+  Object.entries(MIXES).forEach(([k,v])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=v.name;
+    b.setAttribute("aria-pressed", S.mixPreset===k);
+    b.onclick=()=>{ S.mixPreset=k; Object.entries(v.mix).forEach(([pk,pct])=>S.preps[pk].pct=pct); renderPreps(); renderMixPresets(); calc(); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- ripieni ---------- */
+function renderFills(){
+  const chips=$("fillChips"); chips.innerHTML="";
+  Object.entries(FILLS).forEach(([k,f])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=f.name;
+    b.setAttribute("aria-pressed", !!S.fills[k].on);
+    b.onclick=()=>{ S.fills[k].on=!S.fills[k].on; if(S.fills[k].on && !S.fills[k].pct) S.fills[k].pct=10; renderFills(); calc(); };
+    chips.appendChild(b);
+  });
+  const box=$("fills"); box.innerHTML="";
+  Object.entries(FILLS).forEach(([k,f])=>{
+    if(!S.fills[k].on) return;
+    const d=document.createElement("div"); d.className="field";
+    d.innerHTML=`<label for="fp_${k}"><span>${f.name}</span><b data-fo="${k}"></b></label><div class="inp"><input id="fp_${k}" type="number" min="0" max="100" step="5" value="${S.fills[k].pct}"><span>%</span></div>`;
+    d.querySelector("input").oninput=e=>{ S.fills[k].pct=num(e.target.value); calc(); };
+    box.appendChild(d);
+  });
+}
+
+/* ---------- sushi-zu ---------- */
+function renderZu(){
+  const box=$("zuPresets"); box.innerHTML="";
+  Object.entries(ZU).forEach(([k,v])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=v.name;
+    b.setAttribute("aria-pressed", S.zuPreset===k);
+    b.onclick=()=>{ S.zuPreset=k; Object.assign(S,{vin:v.vin,sug:v.sug,salt:v.salt}); fillInputs(); renderZu(); calc(); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- segmenti ---------- */
+function seg(id,key,after){
+  const el=$(id);
+  el.querySelectorAll("button").forEach(b=>{
+    b.setAttribute("aria-pressed", S[key]===b.dataset.v);
+    b.onclick=()=>{ S[key]=b.dataset.v; if(after) after(); seg(id,key,after); calc(); };
+  });
+}
+
+/* ---------- input semplici ---------- */
+const SIMPLE=["people","pp","pieces","yield","water","margin","vin","sug","salt","soak","cook","rest","cool","rollMin","serveAt"];
+const ZUK=["vin","sug","salt"];
+function fillInputs(){ SIMPLE.forEach(k=>{ $(k).value=S[k]; }); }
+SIMPLE.forEach(k=>{
+  $(k).addEventListener("input",e=>{
+    S[k]= k==="serveAt" ? e.target.value : num(e.target.value);
+    if(ZUK.includes(k)){ S.zuPreset=""; renderZu(); }
+    if(k==="pp"){ S.appetite=Object.keys(APP).find(a=>APP[a]===S.pp)||""; seg("appetite","appetite",onApp); }
+    calc();
+  });
+});
+function onApp(){ if(APP[S.appetite]){ S.pp=APP[S.appetite]; $("pp").value=S.pp; } }
+
+/* ---------- calcolo ---------- */
+function calc(){
+  save();
+  const fixed = S.mode==="fixed";
+  $("ppField").hidden = fixed; $("appWrap").hidden = fixed; $("piecesField").hidden = !fixed;
+  const people = Math.max(1, Math.round(S.people));
+  const target = fixed ? Math.max(0, Math.round(S.pieces)) : people*Math.max(0,S.pp);
+  const warns=[];
+
+  // ripartizione
+  const keys=Object.keys(PREPS);
+  const pctSum = keys.reduce((a,k)=>a+Math.max(0,S.preps[k].pct),0);
+  $("mixSum").textContent = `somma ${nf0.format(pctSum)}%`;
+  if(pctSum<=0) warns.push("Dai una quota ad almeno una preparazione.");
+  let pieces=0, cookedRice=0, fillTot=0, noriTot=0, sesame=0, rolls=0, small=0, oni=0;
+  const rows=[];
+  keys.forEach(k=>{
+    const s=S.preps[k], p=PREPS[k], share = pctSum>0 ? Math.max(0,s.pct)/pctSum : 0;
+    const ppu=Math.max(1,Math.round(s.ppu));
+    let units = share>0 ? Math.max(1, Math.round(target*share/ppu)) : 0;
+    const pz=units*ppu, rice=units*s.rice, fill=units*s.fill, nori=units*s.nori;
+    pieces+=pz; cookedRice+=rice; fillTot+=fill; noriTot+=nori; sesame+=units*p.sesame;
+    if(p.roll) rolls+=units; else if(k==="onigiri") oni+=units; else if(k!=="temaki") small+=units;
+    const out=document.querySelector(`.prep[data-k="${k}"] [data-out]`);
+    document.querySelector(`.prep[data-k="${k}"]`).classList.toggle("off", units===0);
+    if(out) out.textContent = units ? (p.roll ? `${units} ${units===1?"rotolo":"rotoli"} · ${pz} pz` : `${pz} pz`) : "—";
+    if(units) rows.push({k,p,units,pz,rice,fill,nori});
+  });
+  const mf = 1+Math.max(0,S.margin)/100;
+  const seasonedNeed = cookedRice*mf;
+
+  // riso: condito = crudo × (resa + sushi-zu)
+  const zuFrac = (S.vin+S.sug+S.salt)/100;
+  const yld = Math.max(1, S.yield);
+  const raw = seasonedNeed/(yld+zuFrac);
+  const water = raw*S.water, cooked = raw*yld;
+  const vin=raw*S.vin/100, sug=raw*S.sug/100, salt=raw*S.salt/100;
+
+  // quantità
+  $("qtyHint").textContent = fixed
+    ? `Circa ${nf0.format(target/people)} pezzi a testa. Le persone servono anche per soia, wasabi e zenzero.`
+    : `${people} × ${nf0.format(S.pp)} = ${nf0.format(target)} pezzi richiesti. Come piatto unico 15 a 20 pezzi a testa sono un pasto normale.`;
+
+  $("piecesTot").innerHTML = nf0.format(pieces)+"<span> pz</span>";
+  $("totMeta").innerHTML = `${nf0.format(pieces/people)} pz a testa · ${people} pers.<br>${nf0.format(raw)} g riso crudo`;
+
+  if(S.water<1 || S.water>1.35) warns.push("Rapporto acqua insolito: per il riso da sushi si sta tra 1,1 e 1,25 volte il peso del crudo.");
+  if(S.vin<8 && S.zuPreset!=="pronto") warns.push("Poco aceto: sotto l'8% il riso resta poco saporito e si conserva peggio.");
+  $("warns").innerHTML = warns.map(w=>`<div class="warn">${w}</div>`).join("");
+
+  $("riceTbl").innerHTML = `<table><thead><tr><th>Voce</th><th class="n">Peso</th><th class="n"></th></tr></thead><tbody>
+    <tr><td>Riso crudo<small>da lavare finché l'acqua è quasi limpida</small></td><td class="n">${nf0.format(raw)} g</td><td class="p">100%</td></tr>
+    <tr><td>Acqua di cottura</td><td class="n">${nf0.format(water)} g</td><td class="p">${nf0.format(S.water*100)}%</td></tr>
+    <tr><td>Riso cotto</td><td class="n">${nf0.format(cooked)} g</td><td class="p">× ${nf2.format(yld)}</td></tr>
+    <tr><td>Sushi-zu</td><td class="n">${nf0.format(vin+sug+salt)} g</td><td class="p">${nf1.format(zuFrac*100)}%</td></tr>
+    <tr class="sum"><td>Riso condito</td><td class="n">${nf0.format(raw*(yld+zuFrac))} g</td><td></td></tr>
+  </tbody></table>${S.margin>0?`<p class="hint" style="margin-top:8px">Include ${nf0.format(S.margin)}% di margine sui ${nf0.format(cookedRice)} g che servono.</p>`:""}`;
+
+  const spoon=(v,per,lab)=> v>0 ? `≈ ${nf1.format(v/per)} ${lab}` : "";
+  $("zuTbl").innerHTML = `<table><thead><tr><th>Ingrediente</th><th class="n">Peso</th><th class="n">Misura</th></tr></thead><tbody>
+    <tr><td>Aceto di riso</td><td class="n">${g(vin)} g</td><td class="p">${nf0.format(vin)} ml · ${spoon(vin,15,"cucch.")}</td></tr>
+    <tr><td>Zucchero</td><td class="n">${g(sug)} g</td><td class="p">${spoon(sug,12,"cucch.")}</td></tr>
+    <tr><td>Sale fino</td><td class="n">${g(salt)} g</td><td class="p">${spoon(salt,6,"cucchiaini")}</td></tr>
+  </tbody></table><p class="hint" style="margin-top:8px">Versalo sul riso caldo appena cotto, mescola a tagli con la spatola e sventola per lucidarlo e portarlo a temperatura corporea.</p>`;
+
+  // ripieni
+  const fk=Object.keys(FILLS).filter(k=>S.fills[k].on);
+  const fSum=fk.reduce((a,k)=>a+Math.max(0,S.fills[k].pct),0);
+  $("fillTot").textContent = `${nf0.format(fillTot*mf)} g in tutto`;
+  const fillRows=[];
+  let rawFish=false;
+  fk.forEach(k=>{
+    const f=FILLS[k], w = fSum>0 ? fillTot*mf*Math.max(0,S.fills[k].pct)/fSum : 0;
+    const lab=document.querySelector(`[data-fo="${k}"]`); if(lab) lab.textContent=`${nf0.format(w)} g`;
+    if(w<=0) return;
+    if(f.raw) rawFish=true;
+    let qty, note;
+    if(f.per){ const n=Math.ceil(w/f.per); qty=`${nf0.format(r10(w))} g`; note=`${n} ${f.perName[n===1?0:1]} · ${f.note}`; }
+    else { qty=`${nf0.format(r10(w*f.buy))} g`; note=`${nf0.format(w)} g netti, ${f.note}`; }
+    fillRows.push([f.name,qty,note]);
+  });
+  $("fillHint").textContent = fk.length===0 ? "Scegli almeno un ripieno." :
+    (Math.round(fSum)!==100 ? `Le quote sommano ${nf0.format(fSum)}%: le riporto in proporzione a 100. ` : "")+
+    "Quote sul peso totale di ripieni e pesce, fette dei nigiri comprese. Pesce crudo con un margine per pelle e rifilatura.";
+
+  // spesa
+  const sheets=Math.ceil(noriTot-1e-9), spare=sheets>0?Math.max(1,Math.ceil(sheets*0.1)):0;
+  const shop=[];
+  shop.push(["grp","Base"]);
+  shop.push(["Riso per sushi",`${nf0.format(r10(raw))} g`,"chicco tondo giapponese"]);
+  shop.push(["Aceto di riso",`${nf0.format(Math.ceil(vin/5)*5)} ml`,S.sug+S.salt>0?`più ${g(sug)} g zucchero e ${g(salt)} g sale`:"già condito"]);
+  if(sheets>0) shop.push(["Alga nori",`${sheets+spare} fogli`,`${sheets} + ${spare} di scorta · ${Math.ceil((sheets+spare)/10)} conf. da 10`]);
+  if(fillRows.length){ shop.push(["grp","Ripieni e pesce"]); fillRows.forEach(r=>shop.push(r)); }
+  shop.push(["grp","In tavola"]);
+  if(sesame>0) shop.push(["Sesamo",`${nf0.format(Math.ceil(sesame*mf/5)*5)} g`,"tostato, per gli uramaki"]);
+  shop.push(["Salsa di soia",`${nf0.format(people*30)} ml`,"30 ml a testa"]);
+  shop.push(["Wasabi",`${nf0.format(people*3)} g`,`3 g a testa · un tubetto da 43 g basta per ${nf0.format(43/3)} persone`]);
+  shop.push(["Zenzero marinato (gari)",`${nf0.format(people*20)} g`,"20 g a testa"]);
+  $("shop").innerHTML = `<table><thead><tr><th>Articolo</th><th class="n">Quantità</th></tr></thead><tbody>`+
+    shop.map(r=>r[0]==="grp" ? `<tr class="grp"><td colspan="2">${r[1]}</td></tr>` :
+      `<tr><td>${r[0]}<small>${r[2]}</small></td><td class="n">${r[1]}</td></tr>`).join("")+`</tbody></table>`;
+
+  // per preparazione
+  $("perPrep").innerHTML = `<table><thead><tr><th>Preparazione</th><th class="n">Pz</th><th class="n">Riso</th><th class="n">Ripieno</th><th class="n">Nori</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r.p.name}<small>${r.p.roll?`${r.units} ${r.units===1?"rotolo":"rotoli"} da ${S.preps[r.k].ppu}`:`${nf0.format(S.preps[r.k].rice)} g riso a pezzo`}</small></td><td class="n">${r.pz}</td><td class="n">${nf0.format(r.rice)} g</td><td class="n">${nf0.format(r.fill)} g</td><td class="n">${nf2.format(r.nori)}</td></tr>`).join("")+
+    `<tr class="sum"><td>Totale</td><td class="n">${pieces}</td><td class="n">${nf0.format(cookedRice)} g</td><td class="n">${nf0.format(fillTot)} g</td><td class="n">${nf1.format(noriTot)}</td></tr></tbody></table>
+    <p class="hint" style="margin-top:8px">Riso condito, ripieni netti e fogli di nori, senza margine. Bagna le mani in acqua e un goccio d'aceto (tezu) per lavorare il riso.</p>`;
+
+  // programma
+  const tl=$("timeline"); tl.innerHTML="";
+  const serve=new Date(S.serveAt);
+  if(!isNaN(serve)){
+    const mn=m=>m*60e3;
+    const rollTime = rolls*S.rollMin + small*1.5 + oni*2;
+    const t=serve.getTime();
+    const tRoll=t-mn(rollTime), tCool=tRoll-mn(S.cool), tRest=tCool-mn(S.rest), tCook=tRest-mn(S.cook), tSoak=tCook-mn(S.soak), tWash=tSoak-mn(10);
+    const steps=[];
+    if(rawFish) steps.push([Math.min(t-mn(12*60),tWash),"Pesce in frigo","sposta il pesce abbattuto dal freezer al frigo per scongelarlo lentamente"]);
+    steps.push([tWash,"Lava il riso",`${nf0.format(raw)} g, sciacqua e strofina 4 o 5 volte finché l'acqua è quasi limpida`]);
+    if(S.soak>0) steps.push([tSoak,"Ammollo e scolatura",`${nf0.format(S.soak)} min, poi lascialo scolare bene in un colino`]);
+    steps.push([tCook,"Cottura",`${nf0.format(water)} g d'acqua, coperchio chiuso, ${nf0.format(S.cook)} min a fuoco minimo dal bollore`]);
+    steps.push([tCook,"Intanto: sushi-zu e ripieni",`scalda il condimento senza bollire; taglia pesce e verdure a bastoncini, tienili in frigo`]);
+    if(S.rest>0) steps.push([tRest,"Riposo",`${nf0.format(S.rest)} min a fuoco spento senza aprire`]);
+    steps.push([tCool,"Condisci e intiepidisci",`in una ciotola larga (meglio di legno): sushi-zu, tagli di spatola e ventaglio, poi coperto con un panno umido`]);
+    if(rollTime>0) steps.push([tRoll,"Arrotola e forma",[rolls?`${rolls} rotoli`:"",small?`${small} nigiri e gunkan`:"",oni?`${oni} onigiri`:""].filter(Boolean).join(", ")+`, circa ${nf0.format(rollTime)} min; taglia con lama bagnata`]);
+    steps.push([t,"A tavola",rows.some(r=>r.k==="temaki")?"servi con soia, wasabi e zenzero; temaki da arrotolare al momento":"servi con soia, wasabi e zenzero; il riso è al meglio entro un'ora"]);
+    steps.sort((a,b)=>a[0]-b[0]);
+    const df=new Intl.DateTimeFormat("it-IT",{weekday:"short",day:"numeric"}), tf=new Intl.DateTimeFormat("it-IT",{hour:"2-digit",minute:"2-digit"});
+    steps.forEach(([ts,n,d])=>{
+      const dd=new Date(ts), li=document.createElement("li");
+      li.innerHTML=`<div class="t">${tf.format(dd)}<small>${df.format(dd)}</small></div><div><b>${n}</b><div class="hint">${d}</div></div>`;
+      tl.appendChild(li);
+    });
+    if(steps[0][0]<Date.now()) tl.insertAdjacentHTML("afterbegin",`<li style="display:block"><div class="warn">Per l'orario scelto avresti dovuto iniziare già: sposta l'orario o accorcia i tempi.</div></li>`);
+  }
+}
+
+renderPreps(); renderMixPresets(); renderFills(); renderZu(); fillInputs();
+seg("mode","mode"); seg("appetite","appetite",onApp); calc();
+</script>
+</body>
+</html>

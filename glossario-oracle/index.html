@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Glossario Oracle · PandaToolkit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="stylesheet" href="../assets/panda.css">
+<style>
+/* Layout: barra filtri in alto, poi sezioni-card con le voci del glossario.
+   In modalità "Confronto" compaiono una tabella riassuntiva e, in ogni voce, gli equivalenti PostgreSQL / SQL Server / MySQL.
+   Colori, font e controlli comuni stanno in ../assets/panda.css */
+.tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+@media (max-width:640px){.tools{grid-template-columns:minmax(0,1fr)}}
+.tools .seg{min-width:240px}
+@media (max-width:640px){.tools .seg{min-width:0}}
+.count{font:12px var(--f-num);color:var(--muted)}
+
+code,.mono{font-family:var(--f-num);font-size:.88em;overflow-wrap:anywhere}
+p code,li code,td code,blockquote code{background:var(--sunk);padding:1px 5px;border-radius:4px}
+.card p{margin:0}
+.card a{color:var(--accent)}
+.intro{color:var(--muted);margin:0;font-size:14px}
+
+.entry{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.entry:first-of-type{border-top:0;padding-top:0}
+.ehead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.ehead h3{font-family:var(--f-num);font-weight:600;font-size:16px;margin:0;overflow-wrap:anywhere}
+.ehead .tag{overflow-wrap:anywhere}
+.tag.acc{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+
+blockquote{margin:0;padding:2px 0 2px 14px;border-left:2px solid var(--accent);color:var(--muted);font-size:14px}
+blockquote p+p{margin-top:6px}
+blockquote cite{display:block;margin-top:4px;font:11.5px var(--f-num);font-style:normal;color:var(--muted)}
+
+.callout{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.callout .label{color:var(--accent)}
+.warn{display:flex;flex-direction:column;gap:6px}
+.warn .label{color:inherit}
+
+figure{margin:0;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-x:auto}
+figure svg{display:block;width:100%;min-width:600px;height:auto;color:var(--fg)}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px;min-width:0}
+.sv-box{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.sv-acc{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.sv-lab{font-family:var(--f-body);font-size:13px;font-weight:600;fill:currentColor}
+.sv-sub{font-family:var(--f-num);font-size:11px;fill:var(--muted)}
+.sv-edge{font-family:var(--f-num);font-size:11px;fill:var(--muted)}
+.sv-line{stroke:var(--muted);stroke-width:1.4;fill:none}
+.sv-line-acc{stroke:var(--accent);stroke-width:1.6;fill:none}
+
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tblwrap table{font-size:13.5px}
+.tblwrap td,.tblwrap th{padding:7px 12px 7px 0;vertical-align:top}
+.tblwrap th{white-space:nowrap}
+.cmp table,.sum table,.concepts table{min-width:680px}
+.sum table{min-width:760px}
+.cmp{display:flex;flex-direction:column;gap:6px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.cmp td:first-child{white-space:nowrap;font-weight:600;width:110px}
+.cmp td.note{color:var(--muted);font-size:12.5px;width:40%}
+.none{color:var(--warn);font-style:italic}
+.sum h2{flex-wrap:wrap}
+.sum tbody tr{cursor:pointer}
+/* su telefono le schede di confronto delle singole voci si impilano; la tabella riassuntiva resta scorrevole */
+@media (max-width:640px){
+  .cmp table{min-width:0}.cmp thead{display:none}
+  .cmp tr{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .cmp tr:last-child{border-bottom:0}
+  .cmp td{border:0;padding:0!important;width:auto!important;white-space:normal!important}
+}
+.sum tbody tr:hover td{background:var(--sunk)}
+.sum td:first-child{font-family:var(--f-num);font-size:12.5px;font-weight:600}
+.concepts td:first-child{font-weight:600;width:150px}
+
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:10px}
+ol.sources{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+ol.sources a{display:block;font:12px var(--f-num);overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted)}
+section.card{scroll-margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← PandaToolkit</a>
+  <header>
+    <h1>Glossario Oracle</h1>
+    <p>Cosa misura davvero ogni statistica di OracleMetricsExporter: cursori, parse, cache di sessione, limiti di istanza e <span class="mono">v$sysmetric</span>. Per ogni voce la definizione testuale di Oracle, come leggerla su una dashboard e, in modalità confronto, l'equivalente su PostgreSQL, SQL Server e MySQL/MariaDB.</p>
+  </header>
+
+  <section class="card" aria-label="Filtri">
+    <div class="tools">
+      <div class="inp"><input id="q" type="search" placeholder="Cerca metrica, vista o parola (es. parse, pg_stat, cache)…" aria-label="Cerca nel glossario" autocomplete="off"></div>
+      <div class="seg" id="mode" role="group" aria-label="Modalità di visualizzazione">
+        <button type="button" data-v="ora" aria-pressed="true">Solo Oracle</button>
+        <button type="button" data-v="cmp" aria-pressed="false">Confronto</button>
+      </div>
+    </div>
+    <div class="chips" id="cats" role="group" aria-label="Categorie">
+      <button type="button" class="chip" data-c="all" aria-pressed="true">Tutte</button>
+      <button type="button" class="chip" data-c="parse" aria-pressed="false">Percorso del parse</button>
+      <button type="button" class="chip" data-c="cursori" aria-pressed="false">Cursori</button>
+      <button type="button" class="chip" data-c="cache" aria-pressed="false">Cache di sessione</button>
+      <button type="button" class="chip" data-c="parsing" aria-pressed="false">Parse</button>
+      <button type="button" class="chip" data-c="risorse" aria-pressed="false">Risorse</button>
+      <button type="button" class="chip" data-c="sysmetric" aria-pressed="false">Metriche di sistema</button>
+      <button type="button" class="chip" data-c="trappole" aria-pressed="false">Trappole</button>
+      <button type="button" class="chip" data-c="concetti" aria-pressed="false">Concetti tra DB</button>
+    </div>
+    <span class="count" id="count" aria-live="polite"></span>
+  </section>
+
+  <!-- tabella riassuntiva, solo in modalità confronto -->
+  <section class="card sum" id="sum" hidden>
+    <h2>Confronto rapido <small>clic su una riga per la voce</small></h2>
+    <p class="hint">Nomi di viste, DMV, contatori e variabili di stato più vicini alla statistica Oracle. «—» significa che non esiste un equivalente diretto: i dettagli sono nella nota della singola voce.</p>
+    <div class="tblwrap"><table><thead><tr><th>Oracle</th><th>PostgreSQL</th><th>SQL Server</th><th>MySQL / MariaDB</th></tr></thead><tbody id="sumBody"></tbody></table></div>
+  </section>
+
+  <!-- =============== PARSE =============== -->
+  <section class="card" data-cat="parse" id="parse">
+    <h2>Il percorso di un parse</h2>
+    <p class="intro">Quasi tutte le statistiche dei cursori sono contatori piazzati lungo questo percorso. Capirlo una volta rende leggibile tutto il resto.</p>
+    <p>Quando l'applicazione chiede al database di eseguire una SQL, Oracle deve prima trasformare quel testo in qualcosa di eseguibile: è il <em>parse</em>. Quanto costa dipende da dove trova il lavoro già fatto.</p>
+    <figure>
+      <svg viewBox="0 0 900 330" role="img" aria-label="Percorso di una parse call: prima la cache di sessione, poi la library cache; il fallimento di entrambe produce un hard parse.">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <rect class="sv-box" x="8" y="140" width="140" height="52" rx="4"/>
+        <text class="sv-lab" x="78" y="163" text-anchor="middle">parse call</text>
+        <text class="sv-sub" x="78" y="180" text-anchor="middle">dall'applicazione</text>
+        <rect class="sv-box" x="196" y="140" width="170" height="52" rx="4"/>
+        <text class="sv-lab" x="281" y="163" text-anchor="middle">cache di sessione</text>
+        <text class="sv-sub" x="281" y="180" text-anchor="middle">cursori già chiusi</text>
+        <rect class="sv-box" x="424" y="140" width="150" height="52" rx="4"/>
+        <text class="sv-lab" x="499" y="163" text-anchor="middle">library cache</text>
+        <text class="sv-sub" x="499" y="180" text-anchor="middle">shared pool</text>
+        <rect class="sv-box" x="424" y="24" width="240" height="52" rx="4"/>
+        <text class="sv-lab" x="444" y="47">nessun parse</text>
+        <text class="sv-sub" x="444" y="64">session cursor cache hits +1</text>
+        <rect class="sv-box" x="640" y="140" width="252" height="52" rx="4"/>
+        <text class="sv-lab" x="660" y="163">soft parse</text>
+        <text class="sv-sub" x="660" y="180">parse count (total) +1</text>
+        <rect class="sv-acc" x="640" y="252" width="252" height="60" rx="4"/>
+        <text class="sv-lab" x="660" y="275">hard parse</text>
+        <text class="sv-sub" x="660" y="292">parse count (total) +1</text>
+        <text class="sv-sub" x="660" y="306">parse count (hard) +1</text>
+        <line class="sv-line" x1="148" y1="166" x2="188" y2="166" marker-end="url(#ar)"/>
+        <path class="sv-line" d="M 281 140 L 281 50 L 416 50" marker-end="url(#ar)"/>
+        <text class="sv-edge" x="290" y="96">hit</text>
+        <line class="sv-line" x1="366" y1="166" x2="416" y2="166" marker-end="url(#ar)"/>
+        <text class="sv-edge" x="372" y="158">miss</text>
+        <line class="sv-line" x1="574" y1="166" x2="632" y2="166" marker-end="url(#ar)"/>
+        <text class="sv-edge" x="580" y="158">hit</text>
+        <path class="sv-line-acc" d="M 499 192 L 499 282 L 632 282" marker-end="url(#ar)"/>
+        <text class="sv-edge" x="508" y="228">miss</text>
+      </svg>
+      <figcaption>Il costo cresce da sinistra a destra. Un hit nella cache di sessione non incrementa nemmeno <span class="mono">parse count (total)</span>: il parse non avviene. Un hard parse costruisce da zero il piano di esecuzione, e per farlo acquisisce i latch della library cache e dello shared pool: cioè disturba anche gli altri.</figcaption>
+    </figure>
+    <blockquote>
+      <p>“In order to perform a hard parse, Oracle Database uses more resources than during a soft parse. Resources used for a soft parse include CPU and library cache latch gets. Resources required for a hard parse include additional CPU, library cache latch gets, and shared pool latch gets.”</p>
+      <cite>Database Performance Tuning Guide · fonte 4</cite>
+    </blockquote>
+    <p>Da qui la regola pratica: gli hard parse non sono solo lenti per chi li fa, sono <em>contagiosi</em>. La causa tipica è SQL costruita con i letterali al posto delle bind variable, che rende ogni esecuzione un testo diverso e quindi un cursore nuovo.</p>
+    <div class="callout cmp-only" hidden>
+      <span class="label">Negli altri DB</span>
+      <p><b>SQL Server</b> ha lo stesso schema: plan cache globale, lookup per testo del batch, compilazione su miss (<code>SQL Compilations/sec</code>). <b>PostgreSQL</b> non ha una cache dei piani condivisa tra sessioni: ogni statement non preparato viene pianificato ogni volta, e i piani dei prepared statement vivono solo nella sessione che li ha preparati. <b>MySQL/MariaDB</b> non hanno cache dei piani condivisa: ogni statement viene parsato e ottimizzato a ogni esecuzione; i prepared statement risparmiano il parse, ma restano per sessione. La vecchia query cache di MySQL (rimossa in 8.0) memorizzava risultati, non piani.</p>
+    </div>
+  </section>
+
+  <!-- =============== CURSORI =============== -->
+  <section class="card" data-cat="cursori" id="cursori">
+    <h2>Cursori aperti</h2>
+    <p class="intro">Un cursore è il riferimento con cui l'applicazione lavora su un'area SQL privata. Il limite è per sessione, non per database.</p>
+
+    <article class="entry" data-cmp="open_cur">
+      <div class="ehead"><h3>opened cursors current</h3><span class="tag acc">oracle_open_cursors_total</span></div>
+      <blockquote><p>“Total number of current open cursors”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+      <p>Quanti cursori la sessione ha aperti <em>in questo istante</em>. È il contatore su cui l'exporter costruisce tutte le metriche dei cursori, sommandolo per PDB e per programma client.</p>
+      <p>Non è una scelta arbitraria: la query diagnostica che Oracle stessa pubblica nella pagina di errore di <span class="mono">ORA-01000</span> confronta esattamente questa statistica con il parametro <code>open_cursors</code>.</p>
+    </article>
+
+    <article class="entry" data-cmp="open_lim">
+      <div class="ehead"><h3>OPEN_CURSORS</h3><span class="tag acc">oracle_open_cursors_limit</span><span class="tag">parametro</span></div>
+      <blockquote><p>“OPEN_CURSORS specifies the maximum number of open cursors (handles to private SQL areas) a session can have at once. You can use this parameter to prevent a session from opening an excessive number of cursors.”</p><cite>Database Reference · fonte 2</cite></blockquote>
+      <p><strong>Per sessione.</strong> Un totale alto sul database non è di per sé un problema: il segnale è la sessione peggiore vicina al limite. Per questo la dashboard mostra <code>oracle_open_cursors_session_max</code> in rapporto al limite, e non il totale.</p>
+      <p>Alzare il parametro costa poco: Oracle nota che, finché una sessione non apre davvero quei cursori, “there is no added overhead to setting this value higher than actually needed”. Ma se il consumo cresce senza fermarsi, alzare il tetto sposta solo in avanti il momento dell'errore.</p>
+    </article>
+
+    <article class="entry" data-cmp="ora1000">
+      <div class="ehead"><h3>ORA-01000</h3><span class="tag">errore</span></div>
+      <blockquote><p>“An application is attempting to open too many cursors within the current session. This could be a result of the application not closing cursors properly or keeping cursors open for longer than needed. This could also be a result of the application genuinely requiring more cursors than currently permitted by the OPEN_CURSORS parameter value.”</p><cite>Error Help, causa dell'errore · fonte 7</cite></blockquote>
+      <p>Le due cause sono distinguibili proprio dalla dashboard: un leak si vede come crescita monotona dei cursori a numero di sessioni costante (il pannello <span class="mono">deriv()</span>), un fabbisogno legittimo si vede come livello alto ma stabile che segue il carico.</p>
+    </article>
+
+    <article class="entry" data-cmp="open_cum">
+      <div class="ehead"><h3>opened cursors cumulative</h3><span class="tag acc">oracle_session_stat{stat="opened_cursors_cumulative"}</span></div>
+      <blockquote><p>“In V$SESSTAT: Total number of cursors opened since the start of the session”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+      <p>È il <em>churn</em>: quante aperture in totale, non quante ne sono rimaste aperte. Serve a separare due situazioni che il conteggio corrente confonde: chi tiene aperti molti cursori a lungo, e chi ne apre e chiude di continuo (il secondo caso pesa sul parsing, non sul limite).</p>
+    </article>
+  </section>
+
+  <!-- =============== CACHE =============== -->
+  <section class="card" data-cat="cache" id="cache">
+    <h2>Cache di sessione</h2>
+    <p class="intro">La parte più fraintesa: sono cursori <em>chiusi</em>, e non rientrano nel conteggio di quelli aperti.</p>
+    <p>Quando l'applicazione chiude un cursore, Oracle non sempre butta via il lavoro fatto. Se quella stessa SQL è già stata chiusa tre volte, il cursore di sessione finisce in una cache dedicata, pronto a essere riusato senza un nuovo parse.</p>
+    <figure>
+      <svg viewBox="0 0 880 190" role="img" aria-label="Ciclo di vita di un cursore: aperto, poi chiuso, poi in cache di sessione dalla terza chiusura, da cui può tornare aperto senza parse.">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <rect class="sv-acc" x="8" y="76" width="212" height="64" rx="4"/>
+        <text class="sv-lab" x="28" y="100">aperto</text>
+        <text class="sv-sub" x="28" y="118">opened cursors current +1</text>
+        <text class="sv-sub" x="28" y="132">conta per open_cursors</text>
+        <rect class="sv-box" x="316" y="76" width="150" height="64" rx="4"/>
+        <text class="sv-lab" x="391" y="105" text-anchor="middle">chiuso</text>
+        <text class="sv-sub" x="391" y="122" text-anchor="middle">nessun contatore</text>
+        <rect class="sv-box" x="562" y="76" width="310" height="64" rx="4"/>
+        <text class="sv-lab" x="582" y="100">in cache di sessione</text>
+        <text class="sv-sub" x="582" y="118">session cursor cache count +1</text>
+        <text class="sv-sub" x="582" y="132">NON conta per open_cursors</text>
+        <line class="sv-line" x1="220" y1="108" x2="308" y2="108" marker-end="url(#ar2)"/>
+        <text class="sv-edge" x="230" y="100">close()</text>
+        <line class="sv-line" x1="466" y1="108" x2="554" y2="108" marker-end="url(#ar2)"/>
+        <text class="sv-edge" x="470" y="100">3ª chiusura</text>
+        <path class="sv-line-acc" d="M 717 76 L 717 34 L 114 34 L 114 72" marker-end="url(#ar2)"/>
+        <text class="sv-edge" x="360" y="26" text-anchor="middle">riuso: riapertura senza parse (session cursor cache hits +1)</text>
+      </svg>
+      <figcaption>Un cursore è o aperto o in cache, mai entrambe le cose. I due contatori misurano stati diversi dello stesso ciclo di vita, quindi non si sommano.</figcaption>
+    </figure>
+
+    <article class="entry" data-cmp="cache_cnt">
+      <div class="ehead"><h3>session cursor cache count</h3><span class="tag acc">oracle_session_stat{stat="cached_cursors"}</span></div>
+      <blockquote><p>“Total number of cursors cached. This statistic is incremented only if SESSION_CACHED_CURSORS &gt; 0. This statistic is the most useful in V$SESSTAT. If the value for this statistic in V$SESSTAT is close to the setting of the SESSION_CACHED_CURSORS parameter, the value of the parameter should be increased.”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+      <p>La Tuning Guide è esplicita su cosa contenga quella cache: “The session cursor cache contains <em>closed</em> session cursors”, e il cursore ci finisce quando “a cursor has been closed three times”.</p>
+      <div class="callout">
+        <span class="label">Il punto che conta</span>
+        <p>Questa statistica <strong>non è un sottoinsieme di</strong> <span class="mono">opened cursors current</span>: sono due stati diversi del ciclo di vita. Sommarle o sottrarle non ha significato.</p>
+        <p>Misurato sull'istanza di test (21c, <code>session_cached_cursors = 300</code>): <strong>4342</strong> cursori in cache contro <strong>2799</strong> aperti; 142 sessioni su 277 avevano più cache che cursori aperti, e 6 sessioni avevano cache piena e <strong>zero</strong> cursori aperti.</p>
+      </div>
+      <p>Come si legge: cache alta e stabile è parsing risparmiato, cioè la cache che fa il suo mestiere. Se invece il valore per sessione si avvicina a <code>session_cached_cursors</code>, la cache è satura e alzare il parametro riduce i parse: è letteralmente il consiglio della documentazione citata sopra.</p>
+    </article>
+
+    <article class="entry" data-cmp="cache_hits">
+      <div class="ehead"><h3>session cursor cache hits</h3><span class="tag acc">oracle_session_stat{stat="cursor_cache_hits"}</span></div>
+      <blockquote><p>“Number of hits in the session cursor cache. A hit means that the SQL (including recursive SQL) or PL/SQL statement did not have to be reparsed. Subtract this statistic from ‘parse count (total)’ to determine the real number of parses that occurred.”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+      <p>È il risparmio effettivo prodotto dalla cache. Il rapporto fra questa e <span class="mono">parse count (total)</span> dice quanta parte delle richieste di parse non è mai arrivata al parser.</p>
+    </article>
+
+    <article class="entry" data-cmp="cache_par">
+      <div class="ehead"><h3>SESSION_CACHED_CURSORS</h3><span class="tag">parametro</span></div>
+      <blockquote><p>“SESSION_CACHED_CURSORS specifies the number of session cursors to cache. Repeated parse calls of the same SQL (including recursive SQL) or PL/SQL statement cause the session cursor for that statement to be moved into the session cursor cache. Oracle uses a least recently used algorithm to remove entries in the session cursor cache to make room for new entries when needed.”</p><cite>Database Reference · fonte 3</cite></blockquote>
+      <p>Default 50, spesso troppo basso per applicazioni che ripetono le stesse query. È modificabile a caldo, anche per singola sessione.</p>
+    </article>
+  </section>
+
+  <!-- =============== PARSING =============== -->
+  <section class="card" data-cat="parsing" id="parsing">
+    <h2>Parse totali e hard</h2>
+    <p class="intro">Due contatori, una sola domanda: quanto lavoro di compilazione sta facendo il database invece di eseguire.</p>
+
+    <article class="entry" data-cmp="parse_tot">
+      <div class="ehead"><h3>parse count (total)</h3><span class="tag acc">oracle_session_stat{stat="parses"}</span></div>
+      <blockquote><p>“Total number of parse calls (hard, soft, and describe). A soft parse is a check on an object already in the shared pool, to verify that the permissions on the underlying object have not changed.”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+    </article>
+
+    <article class="entry" data-cmp="parse_hard">
+      <div class="ehead"><h3>parse count (hard)</h3><span class="tag acc">oracle_session_stat{stat="hard_parses"}</span></div>
+      <blockquote><p>“Total number of parse calls (real parses). A hard parse is a very expensive operation in terms of memory use, because it requires Oracle to allocate a workheap and other memory structures and then build a parse tree.”</p><cite>Database Reference, Statistics Descriptions · fonte 1</cite></blockquote>
+      <p>La Tuning Guide dà l'equivalenza operativa: <strong>soft parse = library cache hit</strong>, <strong>hard parse = library cache miss</strong>. Se la rappresentazione già compilata esiste ed è condivisibile, il database la riusa; altrimenti ne costruisce una nuova.</p>
+      <p>Nell'exporter questa statistica esiste anche per programma client, e serve a rispondere a una domanda che le metriche di istanza non sanno rispondere: <em>chi</em> li sta facendo.</p>
+    </article>
+  </section>
+
+  <!-- =============== RISORSE =============== -->
+  <section class="card" data-cat="risorse" id="risorse">
+    <h2>Risorse di istanza</h2>
+    <p class="intro">Stessa logica dei cursori (uso confrontato con un limite) ma sulle risorse dell'istanza intera.</p>
+    <blockquote><p>“V$RESOURCE_LIMIT displays information about global resource use for some of the system resources. Use this view to monitor the consumption of resources so that you can take corrective action, if necessary. Many of the resources correspond to initialization parameters.”</p><cite>Database Reference · fonte 6</cite></blockquote>
+
+    <article class="entry" data-cmp="reslimit">
+      <div class="ehead"><h3>V$RESOURCE_LIMIT</h3><span class="tag acc">oracle_resource_*</span></div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Colonna</th><th>Metrica esportata</th><th>Definizione Oracle</th></tr></thead>
+        <tbody>
+          <tr><td><code>CURRENT_UTILIZATION</code></td><td><span class="mono">oracle_resource_current_utilization</span></td><td>“Number of (resources, locks, or processes) currently being used”</td></tr>
+          <tr><td><code>MAX_UTILIZATION</code></td><td><span class="mono">oracle_resource_max_utilization</span></td><td>“Maximum consumption of this resource since the last instance start-up”</td></tr>
+          <tr><td><code>LIMIT_VALUE</code></td><td><span class="mono">oracle_resource_limit</span></td><td>“Unlimited for resources and locks. This can be greater than the initial allocation value”</td></tr>
+        </tbody>
+      </table></div>
+      <p>Le risorse che contano in pratica sono <code>sessions</code>, <code>processes</code> e <code>transactions</code>: quando si esauriscono, le nuove connessioni vengono rifiutate. <span class="mono">MAX_UTILIZATION</span> è un high water mark dall'avvio dell'istanza, quindi risponde alla domanda “quanto ci siamo andati vicino mentre non guardavamo” anche se il picco è già passato.</p>
+      <div class="warn"><span class="label">Attenzione al container</span><p>La vista è popolata solo in <span class="mono">CDB$ROOT</span>. Collegandosi dentro un PDB il modulo non trova righe e lo segnala nei log.</p></div>
+    </article>
+  </section>
+
+  <!-- =============== SYSMETRIC =============== -->
+  <section class="card" data-cat="sysmetric" id="sysmetric">
+    <h2>Metriche di sistema</h2>
+    <p class="intro">Qui i valori non li calcola l'exporter: sono già pronti, calcolati dal database su finestre fisse.</p>
+    <blockquote><p>“V$SYSMETRIC displays the system metric values captured for the most current time interval for both the long duration (60-second) and short duration (15-second) system metrics.”</p><cite>Database Reference · fonte 5</cite></blockquote>
+    <p>L'exporter legge la serie a 60 secondi (<code>group_id = 2</code>). Da qui discende una conseguenza pratica: pollare più spesso di un minuto non aggiunge informazione, si rileggono gli stessi numeri.</p>
+    <p class="hint cmp-only" hidden>Nessuno degli altri tre DB ha un equivalente di <span class="mono">V$SYSMETRIC</span>: espongono contatori cumulativi grezzi e il tasso (al secondo, rapporto) va calcolato dal collector come differenza fra due letture. Vale anche per i contatori SQL Server con “/sec” nel nome: in <span class="mono">sys.dm_os_performance_counters</span> sono cumulativi.</p>
+
+    <article class="entry" data-cmp="aas">
+      <div class="ehead"><h3>Average Active Sessions</h3><span class="tag acc">oracle_sysmetric{metric="average_active_sessions"}</span></div>
+      <p>La misura di carico più sintetica che il database offre: quante sessioni, in media, stanno effettivamente lavorando nel database in un dato istante. Deriva dal <em>database time</em>:</p>
+      <blockquote><p>“This statistic represents the total time spent in database calls for foreground sessions and is an indicator of the total instance workload. DB time is measured cumulatively from the time of instance startup and is calculated by aggregating the CPU and wait times of all foreground sessions not waiting on idle wait events.”</p><cite>Database Performance Tuning Guide, su DB time · fonte 8</cite></blockquote>
+      <p>Va confrontata con il numero di CPU della macchina: un valore stabilmente superiore significa che ci sono più sessioni attive di quante il server ne possa servire insieme.</p>
+    </article>
+
+    <article class="entry" data-cmp="cpuwait">
+      <div class="ehead"><h3>Database CPU Time Ratio · Database Wait Time Ratio</h3><span class="tag">percentuali complementari</span></div>
+      <p>Come si divide il tempo speso nel database: quanto in CPU e quanto in attesa. Non dicono se il database è lento, dicono <em>dove va a finire</em> il tempo, e quindi se ha senso guardare la CPU dell'host o gli eventi di attesa.</p>
+    </article>
+
+    <article class="entry" data-cmp="parse_rate">
+      <div class="ehead"><h3>Hard Parse Count Per Sec · Soft Parse Ratio</h3><span class="tag">a livello di istanza</span></div>
+      <p>Gli stessi concetti della sezione parse, ma già normalizzati al secondo da Oracle e monotoni, quindi adatti ad allarmi, a differenza dei contatori per sessione. Il soft parse ratio vicino al 100% è la situazione sana; un calo indica SQL non condivisibile.</p>
+    </article>
+
+    <article class="entry" data-cmp="bchr">
+      <div class="ehead"><h3>Buffer Cache Hit Ratio</h3><span class="tag">V$SYSMETRIC / V$SYSSTAT</span><span class="tag">aggiunta per il confronto</span></div>
+      <p>Non è nel glossario dell'exporter, ma è la metrica che tutti cercano per prima quando confrontano DB diversi. In Oracle si ricava da <code>V$SYSSTAT</code> come <code>1 − physical reads / (db block gets + consistent gets)</code>, oppure si legge già calcolata in <code>V$SYSMETRIC</code> (metric_name <code>Buffer Cache Hit Ratio</code>).</p>
+      <p>Un valore alto non dimostra che il sistema sta bene: una query che rilegge milioni di blocchi in memoria alza il ratio e consuma CPU. Serve più come segnale di cambiamento che come obiettivo.</p>
+    </article>
+
+    <article class="entry" data-cmp="age">
+      <div class="ehead"><h3>oracle_sysmetric_age_seconds</h3><span class="tag">metrica dell'exporter, non di Oracle</span></div>
+      <p>Non viene da <span class="mono">v$sysmetric</span>: è <code>sysdate - end_time</code>, calcolata dal database a ogni poll. Serve a distinguere un sistema stabile da una raccolta ferma.</p>
+      <div class="warn"><span class="label">Perché esiste</span><p>Se il processo che calcola queste metriche si blocca, <span class="mono">v$sysmetric</span> continua a restituire l'ultima istantanea con lo stesso <span class="mono">end_time</span>. Le dashboard mostrano allora valori <strong>piatti e perfettamente plausibili</strong> invece di un buco: la peggiore modalità di guasto possibile. In esercizio questa metrica oscilla fra 0 e ~60; se cresce senza fermarsi, i numeri sopra di essa sono vecchi.</p></div>
+    </article>
+  </section>
+
+  <!-- =============== TRAPPOLE =============== -->
+  <section class="card" data-cat="trappole" id="trappole">
+    <h2>Tre trappole</h2>
+    <p class="intro">Errori di lettura che producono grafici dall'aria convincente.</p>
+    <ul class="plain">
+      <li class="entry-li"><strong>I contatori per sessione non sono counter Prometheus.</strong> <span class="mono">opened cursors cumulative</span>, <span class="mono">parse count</span> e i cursor cache hits crescono dentro la sessione, ma la loro somma <em>cala</em> quando una sessione si disconnette. Con <span class="mono">rate()</span> quel calo viene letto come un reset e il risultato non ha senso: si usa <span class="mono">deriv()</span> e si guardano i picchi positivi.</li>
+      <li class="entry-li"><strong>Cache di sessione e cursori aperti non si sommano.</strong> È il punto della sezione sulla cache. La differenza fra i due va regolarmente in negativo, perché non sono parti di uno stesso totale.</li>
+      <li class="entry-li"><strong>Un valore fermo non è un valore stabile.</strong> Vale per <span class="mono">v$sysmetric</span> tramite l'età del dato, ma anche per l'exporter stesso: <span class="mono">oracle_exporter_up</span> e <span class="mono">oracle_exporter_last_success_timestamp_seconds</span> esistono per distinguere “niente da segnalare” da “nessuno sta guardando”.</li>
+    </ul>
+    <p class="hint cmp-only" hidden>La prima trappola vale identica altrove: le somme di <span class="mono">pg_stat_activity</span>, <span class="mono">sys.dm_exec_sessions</span> o <span class="mono">performance_schema.status_by_thread</span> calano quando le sessioni escono. I contatori di istanza (<span class="mono">pg_stat_database</span>, <span class="mono">sys.dm_os_performance_counters</span>, <span class="mono">SHOW GLOBAL STATUS</span>) invece crescono fino al riavvio o al reset delle statistiche, e lì <span class="mono">rate()</span> va bene.</p>
+  </section>
+
+  <!-- =============== CONCETTI =============== -->
+  <section class="card concepts" data-cat="concetti" id="concetti">
+    <h2>Concetti tra DB <small>Oracle · PG · SQL Server · MySQL</small></h2>
+    <p class="intro">Dove trovare gli stessi strumenti negli altri motori. Le corrispondenze sono di ruolo, non di semantica: granularità, retention e costi cambiano.</p>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Concetto</th><th>Oracle</th><th>PostgreSQL</th><th>SQL Server</th><th>MySQL / MariaDB</th></tr></thead>
+      <tbody>
+        <tr><td>Storico delle performance</td><td><code>AWR</code> (<code>DBA_HIST_*</code>), snapshot orari; richiede Diagnostics Pack</td><td>Nessuno nativo. <code>pg_stat_statements</code> è cumulativo dall'ultimo reset: lo storico lo fai tu salvando snapshot (o con estensioni tipo pg_profile)</td><td><code>Query Store</code> (2016+, per database, attivo di default sui DB nuovi da 2022)</td><td>Nessuno nativo. <code>performance_schema</code> è in memoria e si azzera al riavvio</td></tr>
+        <tr><td>Statistiche per statement</td><td><code>V$SQL</code>, <code>V$SQLAREA</code></td><td><code>pg_stat_statements</code> (estensione, va in <code>shared_preload_libraries</code>)</td><td><code>sys.dm_exec_query_stats</code> + <code>sys.dm_exec_sql_text</code> (solo piani ancora in cache), oppure Query Store</td><td><code>performance_schema.events_statements_summary_by_digest</code>; vista comoda <code>sys.statement_analysis</code></td></tr>
+        <tr><td>Campionamento sessioni attive</td><td><code>ASH</code> (<code>V$ACTIVE_SESSION_HISTORY</code>, un campione al secondo); Diagnostics Pack</td><td>Solo istantaneo: <code>pg_stat_activity</code>. Campionamento con l'estensione <code>pg_wait_sampling</code> o a mano</td><td>Solo istantaneo: <code>sys.dm_exec_requests</code>, <code>sys.dm_exec_sessions</code>. Storico con Extended Events</td><td>Solo istantaneo: <code>performance_schema.threads</code>, <code>SHOW PROCESSLIST</code></td></tr>
+        <tr><td>Eventi di attesa</td><td><code>V$SYSTEM_EVENT</code>, <code>V$SESSION_EVENT</code>, <code>V$SESSION.EVENT</code></td><td><code>pg_stat_activity.wait_event_type</code> / <code>wait_event</code>: solo lo stato corrente, nessun totale cumulativo nativo</td><td><code>sys.dm_os_wait_stats</code> (cumulativo dal riavvio), <code>sys.dm_exec_session_wait_stats</code> (per sessione, 2016+), Query Store wait stats (2017+)</td><td><code>performance_schema.events_waits_current</code> / <code>events_waits_summary_global_by_event_name</code>; gli strumenti <code>wait/%</code> vanno abilitati in <code>setup_instruments</code></td></tr>
+        <tr><td>Contatori di istanza</td><td><code>V$SYSSTAT</code></td><td><code>pg_stat_database</code>, <code>pg_stat_bgwriter</code>, <code>pg_stat_io</code> (16+)</td><td><code>sys.dm_os_performance_counters</code></td><td><code>SHOW GLOBAL STATUS</code> (<code>performance_schema.global_status</code>)</td></tr>
+        <tr><td>Contatori per sessione</td><td><code>V$SESSTAT</code></td><td>Nessuna vista cumulativa per sessione paragonabile; <code>pg_stat_activity</code> dà stato e query correnti</td><td><code>sys.dm_exec_sessions</code> (cpu_time, reads, logical_reads…)</td><td><code>performance_schema.status_by_thread</code>, <code>SHOW SESSION STATUS</code></td></tr>
+        <tr><td>Metriche pre-calcolate</td><td><code>V$SYSMETRIC</code> (finestre 15 s / 60 s)</td><td>Nessuna</td><td>Nessuna: i contatori “/sec” sono cumulativi, il tasso va calcolato</td><td>Nessuna</td></tr>
+        <tr><td>Limiti di risorsa</td><td><code>V$RESOURCE_LIMIT</code></td><td>Parametri in <code>pg_settings</code> (<code>max_connections</code>…), uso da <code>pg_stat_activity</code></td><td><code>sys.configurations</code>, <code>@@MAX_CONNECTIONS</code></td><td><code>SHOW VARIABLES</code> + <code>SHOW GLOBAL STATUS</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="hint">In MariaDB <code>performance_schema</code> è disattivato di default (va acceso con <code>performance_schema=ON</code> in configurazione, serve un riavvio); in MySQL è attivo di default. AWR e ASH sono inclusi in Enterprise Edition solo con la licenza Diagnostics Pack: interrogare <code>DBA_HIST_*</code> o <code>V$ACTIVE_SESSION_HISTORY</code> senza licenza è un problema contrattuale, non tecnico.</p>
+  </section>
+
+  <section class="card empty" id="empty" hidden><p>Nessuna voce corrisponde alla ricerca.</p></section>
+
+  <!-- =============== FONTI =============== -->
+  <section class="card" data-cat="fonti" id="fonti">
+    <h2>Fonti</h2>
+    <p class="intro">Tutte le citazioni testuali vengono dalla documentazione Oracle 19c, consultata il 31 agosto 2026. Le definizioni delle statistiche sono identiche nelle versioni successive.</p>
+    <ol class="sources">
+      <li>Database Reference · Statistics Descriptions (definizioni di <span class="mono">opened cursors current</span>, <span class="mono">opened cursors cumulative</span>, <span class="mono">session cursor cache count</span>, <span class="mono">session cursor cache hits</span>, <span class="mono">parse count (total)</span>, <span class="mono">parse count (hard)</span>)<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/statistics-descriptions-2.html">docs.oracle.com/en/database/oracle/oracle-database/19/refrn/statistics-descriptions-2.html</a></li>
+      <li>Database Reference · OPEN_CURSORS<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPEN_CURSORS.html">docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPEN_CURSORS.html</a></li>
+      <li>Database Reference · SESSION_CACHED_CURSORS<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/SESSION_CACHED_CURSORS.html">docs.oracle.com/en/database/oracle/oracle-database/19/refrn/SESSION_CACHED_CURSORS.html</a></li>
+      <li>Database Performance Tuning Guide · Tuning the Shared Pool and the Large Pool (hard vs soft parse, cache dei cursori di sessione)<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/tgdba/tuning-shared-pool-and-large-pool.html">docs.oracle.com/en/database/oracle/oracle-database/19/tgdba/tuning-shared-pool-and-large-pool.html</a></li>
+      <li>Database Reference · V$SYSMETRIC<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-SYSMETRIC.html">docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-SYSMETRIC.html</a></li>
+      <li>Database Reference · V$RESOURCE_LIMIT<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-RESOURCE_LIMIT.html">docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-RESOURCE_LIMIT.html</a></li>
+      <li>Error Help · ORA-01000<a href="https://docs.oracle.com/en/error-help/db/ora-01000/">docs.oracle.com/en/error-help/db/ora-01000/</a></li>
+      <li>Database Performance Tuning Guide · Measuring Database Performance (DB time)<a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/tgdba/measuring-database-performance.html">docs.oracle.com/en/database/oracle/oracle-database/19/tgdba/measuring-database-performance.html</a></li>
+    </ol>
+    <p class="hint">Per il confronto: documentazione PostgreSQL (capitolo “Monitoring Database Activity”, <span class="mono">pg_stat_statements</span>), Microsoft Learn (<span class="mono">sys.dm_os_performance_counters</span>, oggetti SQL Statistics, Plan Cache, Buffer Manager, Cursor Manager by Type), MySQL Reference Manual (Server Status Variables, Performance Schema). Le corrispondenze sono nostre e approssimate dove indicato.</p>
+  </section>
+
+  <footer>I numeri citati come “misurato” vengono dall'istanza 21c di test interrogata direttamente, non dalla documentazione. Le definizioni Oracle sono citate testualmente; traduzioni, letture operative e corrispondenze con gli altri DB sono nostre. Nomi riferiti a PostgreSQL 16, SQL Server 2022, MySQL 8.0 / MariaDB 10.11: su versioni vecchie alcune colonne o viste mancano.</footer>
+</div>
+
+<script>
+// Equivalenti negli altri DB. [nome, nota]; nome null = nessun equivalente diretto.
+const CMP = {
+  open_cur: {ora:"V$SESSTAT / V$SYSSTAT 'opened cursors current'",
+    pg:[null,"Nessuna vista globale. <code>pg_cursors</code> e <code>pg_prepared_statements</code> mostrano solo cursori dichiarati e prepared statement <em>della sessione corrente</em>. In PG un cursore è un oggetto esplicito (DECLARE), non l'handle di ogni statement."],
+    ms:["sys.dm_exec_cursors(0); contatore 'Cursor Manager by Type' → 'Active cursors'","Contano solo i cursori espliciti (T-SQL DECLARE CURSOR o cursori server API), non ogni statement eseguito: semantica molto più ristretta di Oracle."],
+    my:["Prepared_stmt_count (GLOBAL STATUS)","Numero corrente di prepared statement su tutto il server. È il parente più vicino; gli statement non preparati non lasciano handle aperti. Dettaglio per sessione in <code>performance_schema.prepared_statements_instances</code> (MySQL)."]},
+  open_lim: {ora:"parametro OPEN_CURSORS (per sessione)",
+    pg:[null,"Nessun limite per sessione su cursori o prepared statement: il tetto è la memoria del backend."],
+    ms:[null,"Nessun limite configurabile sul numero di cursori per sessione."],
+    my:["max_prepared_stmt_count","Limite <strong>globale</strong> (tutte le sessioni insieme), default 16382. Una sola sessione che perde handle può esaurirlo per tutti."]},
+  ora1000: {ora:"ORA-01000 maximum open cursors exceeded",
+    pg:[null,"Nessun errore equivalente; un leak di prepared statement si manifesta come crescita di memoria del backend."],
+    ms:[null,"Nessun errore equivalente dedicato."],
+    my:["ER_MAX_PREPARED_STMT_COUNT_REACHED (1461)","“Can't create more than max_prepared_stmt_count statements”. Stessa famiglia di cause (handle non chiusi dal client), ma limite globale."]},
+  open_cum: {ora:"V$SESSTAT 'opened cursors cumulative'",
+    pg:[null,"Nessun contatore di aperture. <code>pg_stat_statements.calls</code> conta esecuzioni per statement, non aperture di cursori."],
+    ms:["'Cursor Manager by Type' → 'Cursor Requests/sec'","Richieste di cursori espliciti (cumulativo nonostante il nome). Vale la stessa riserva semantica di 'Active cursors'."],
+    my:["Com_stmt_prepare, Com_stmt_close","Quanti prepare/close dall'avvio. Prepare molto più alti degli execute (<code>Com_stmt_execute</code>) indicano statement preparati e buttati, cioè churn."]},
+  cache_cnt: {ora:"V$SESSTAT 'session cursor cache count'",
+    pg:[null,"Nessuna cache automatica di statement chiusi lato server. Il riuso lo fanno i driver (es. JDBC <code>prepareThreshold</code>, <code>preparedStatementCacheQueries</code>) tenendo aperti i prepared statement."],
+    ms:["sys.dm_exec_cached_plans; 'Plan Cache' → 'Cache Object Counts'","Cache dei piani <strong>globale</strong>, non per sessione: concettualmente più vicina alla library cache che alla session cursor cache."],
+    my:[null,"Nessuna. La query cache (rimossa in MySQL 8.0, ancora presente in MariaDB) memorizza risultati, non cursori o piani: non confonderle."]},
+  cache_hits: {ora:"V$SESSTAT 'session cursor cache hits'",
+    pg:["pg_prepared_statements.generic_plans / custom_plans (14+)","Solo per la sessione corrente e con semantica diversa: dicono quante volte un prepared statement ha usato il piano generico (riusato) o uno ricalcolato."],
+    ms:["'Plan Cache' → 'Cache Hit Ratio' (instance 'SQL Plans')","Hit ratio della plan cache globale: è l'analogo del library cache hit, non della cache di sessione. Va diviso per 'Cache Hit Ratio Base'."],
+    my:[null,"Nessuna cache. Proxy di riuso: rapporto <code>Com_stmt_execute</code> / <code>Com_stmt_prepare</code>."]},
+  cache_par: {ora:"parametro SESSION_CACHED_CURSORS",
+    pg:[null,"Nessun equivalente server. <code>plan_cache_mode</code> esiste ma decide piano generico vs custom per i prepared statement, cosa diversa."],
+    ms:[null,"Nessuno. L'opzione server 'optimize for ad hoc workloads' agisce sulla plan cache globale, non per sessione."],
+    my:[null,"Nessuno."]},
+  parse_tot: {ora:"V$SYSSTAT 'parse count (total)'",
+    pg:[null,"Nessun contatore di parse. Ogni statement semplice viene analizzato a ogni esecuzione; come proxy si usa il numero di statement (<code>pg_stat_statements.calls</code>)."],
+    ms:["'SQL Statistics' → 'Batch Requests/sec'","Ogni batch passa per il lookup nella plan cache, come una parse call; ma un batch può contenere più statement. Approssimazione."],
+    my:["Questions / Queries (GLOBAL STATUS)","Senza cache dei piani ogni statement viene parsato: il numero di statement ricevuti è di fatto il numero di parse. <code>Questions</code> esclude gli statement dentro stored program, <code>Queries</code> li include."]},
+  parse_hard: {ora:"V$SYSSTAT 'parse count (hard)'",
+    pg:["pg_stat_statements.plans, total_plan_time (13+)","Popolati solo con <code>pg_stat_statements.track_planning = on</code> (spento di default, ha un costo). Senza cache condivisa quasi ogni esecuzione è una pianificazione: “hard” per costruzione."],
+    ms:["'SQL Statistics' → 'SQL Compilations/sec', 'SQL Re-Compilations/sec'","L'equivalente più fedele: una compilazione è un miss della plan cache. Regola empirica: compilazioni ben sotto il 10% dei batch."],
+    my:["Com_stmt_reprepare","Conta solo i re-prepare forzati da modifiche ai metadati. Per gli statement normali ogni esecuzione è ottimizzata da capo: non esiste un 'soft parse' da distinguere."]},
+  reslimit: {ora:"V$RESOURCE_LIMIT (sessions, processes, transactions)",
+    pg:["max_connections vs count(*) FROM pg_stat_activity","Uso corrente sì, high water mark dall'avvio no: va tracciato dal collector. Ricordare <code>superuser_reserved_connections</code>."],
+    ms:["'General Statistics' → 'User Connections'; sp_configure 'user connections'; max worker threads","'user connections' = 0 significa dinamico fino a 32767. Il limite che morde più spesso sono i worker thread (<code>sys.dm_os_sys_info.max_workers_count</code>)."],
+    my:["max_connections vs Threads_connected; Max_used_connections","<code>Max_used_connections</code> (con <code>Max_used_connections_time</code> da MySQL 5.7) è un vero high water mark dall'avvio, come MAX_UTILIZATION."]},
+  aas: {ora:"V$SYSMETRIC 'Average Active Sessions' (da DB time)",
+    pg:["count(*) FROM pg_stat_activity WHERE state = 'active'","Istantaneo, non una media: va campionato spesso e mediato. Non esiste un DB time cumulativo."],
+    ms:["count(*) FROM sys.dm_exec_requests (sessioni utente)","Istantaneo. Escludere le sessioni di sistema (<code>is_user_process</code> in <code>sys.dm_exec_sessions</code>)."],
+    my:["Threads_running","Istantaneo, include il thread che lo legge. Media da costruire per campionamento."]},
+  cpuwait: {ora:"V$SYSMETRIC 'Database CPU Time Ratio' / 'Database Wait Time Ratio'",
+    pg:[null,"Nessuna ripartizione CPU/attesa nativa. Si stima campionando <code>pg_stat_activity</code>: attive con <code>wait_event</code> NULL ≈ CPU, le altre in attesa."],
+    ms:["sys.dm_os_wait_stats (signal_wait_time_ms vs wait_time_ms)","Non è lo stesso rapporto: la quota di <em>signal wait</em> misura il tempo in coda per la CPU, utile per capire la pressione CPU."],
+    my:["performance_schema.events_waits_summary_global_by_event_name","Tempi di attesa per evento (strumenti da abilitare); la quota CPU non è esposta direttamente."]},
+  parse_rate: {ora:"V$SYSMETRIC 'Hard Parse Count Per Sec', 'Soft Parse Ratio'",
+    pg:[null,"Nessuno: i tassi si calcolano dalle differenze di <code>pg_stat_statements.plans</code> / <code>calls</code>."],
+    ms:["SQL Compilations/sec ÷ Batch Requests/sec; 'Plan Cache' Cache Hit Ratio","Rapporti da calcolare sui delta: i contatori “/sec” nella DMV sono cumulativi."],
+    my:[null,"Concetto non applicabile senza cache dei piani condivisa."]},
+  bchr: {ora:"V$SYSSTAT 'db block gets' + 'consistent gets' vs 'physical reads'; V$SYSMETRIC 'Buffer Cache Hit Ratio'",
+    pg:["pg_stat_database.blks_hit / (blks_hit + blks_read)","<code>blks_read</code> conta le letture fuori da shared_buffers, che però possono arrivare dalla page cache del sistema operativo: il ratio sottostima la memoria effettiva."],
+    ms:["'Buffer Manager' → 'Buffer cache hit ratio' ÷ 'Buffer cache hit ratio base'","Nella DMV va diviso per il contatore base. Molti DBA guardano anche 'Page life expectancy'."],
+    my:["1 − Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests","Read requests = letture logiche, reads = letture che hanno dovuto andare su disco. Solo InnoDB."]},
+  age: {ora:"sysdate − V$SYSMETRIC.end_time (calcolata dall'exporter)",
+    pg:[null,"Non si applica: niente snapshot a finestra. Nota però che le viste <code>pg_stat_*</code> sono aggiornate con un leggero ritardo, e <code>stats_reset</code> dice quando sono state azzerate."],
+    ms:[null,"Non si applica: le DMV sono contatori vivi. Utile <code>sqlserver_start_time</code> in <code>sys.dm_os_sys_info</code> per riconoscere i reset."],
+    my:[null,"Non si applica. <code>Uptime</code> serve a riconoscere i riavvii che azzerano i contatori."]}
+};
+const DBS=[["pg","PostgreSQL"],["ms","SQL Server"],["my","MySQL / MariaDB"]];
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const nameCell=v=>v[0]?`<code>${v[0]}</code>`:`<span class="none">nessun equivalente diretto</span>`;
+
+// blocchi di confronto dentro le voci + tabella riassuntiva
+$$(".entry[data-cmp]").forEach(e=>{
+  const c=CMP[e.dataset.cmp]; if(!c) return;
+  const box=document.createElement("div"); box.className="cmp cmp-only"; box.hidden=true;
+  box.innerHTML=`<span class="label">Negli altri DB</span><div class="tblwrap"><table><thead><tr><th>DB</th><th>Equivalente</th><th>Nota</th></tr></thead><tbody>`+
+    `<tr><td>Oracle</td><td><code>${c.ora}</code></td><td class="note">riferimento</td></tr>`+
+    DBS.map(([k,n])=>`<tr><td>${n}</td><td>${nameCell(c[k])}</td><td class="note">${c[k][1]}</td></tr>`).join("")+`</tbody></table></div>`;
+  e.appendChild(box);
+  const tr=document.createElement("tr"); tr.dataset.for=e.dataset.cmp;
+  tr.innerHTML=`<td>${e.querySelector("h3").textContent}</td>`+DBS.map(([k])=>`<td>${c[k][0]?`<code>${c[k][0]}</code>`:"—"}</td>`).join("");
+  tr.addEventListener("click",()=>e.scrollIntoView({behavior:"smooth",block:"start"}));
+  $("#sumBody").appendChild(tr);
+});
+$$(".entry[data-cmp]").forEach(e=>e.id="v-"+e.dataset.cmp);
+
+let mode="ora", cat="all";
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+// testo indicizzato: in "Solo Oracle" escludo i blocchi di confronto
+const txt=(el)=>{
+  if(mode==="cmp") return norm(el.textContent);
+  const c=el.cloneNode(true); c.querySelectorAll(".cmp-only").forEach(x=>x.remove()); return norm(c.textContent);
+};
+
+function apply(){
+  const q=norm($("#q").value.trim());
+  const terms=q.split(/\s+/).filter(Boolean);
+  const hit=el=>terms.every(t=>txt(el).includes(t));
+  let shown=0, total=0;
+  $$("section[data-cat]").forEach(sec=>{
+    const c=sec.dataset.cat;
+    if(c==="fonti"){ sec.hidden = !(cat==="all" && !terms.length); return; }
+    const catOk = cat==="all"||cat===c;
+    const items=[...sec.querySelectorAll(":scope > .entry, :scope li.entry-li")];
+    if(!catOk){ sec.hidden=true; return; }
+    if(!terms.length){ sec.hidden=false; items.forEach(i=>i.hidden=false); total+=items.length||1; shown+=items.length||1; return; }
+    if(items.length){
+      const m=items.map(hit), any=m.some(Boolean);
+      // se nessuna voce combacia ma l'introduzione sì, mostro la sezione intera
+      const secHit=!any && hit(sec);
+      items.forEach((i,k)=>i.hidden=!(m[k]||secHit));
+      sec.hidden=!(any||secHit);
+      const n=secHit?items.length:m.filter(Boolean).length; shown+=n; total+=items.length;
+    } else { const h=hit(sec); sec.hidden=!h; shown+=h?1:0; total+=1; }
+  });
+  // righe della tabella riassuntiva seguono le voci visibili
+  $$("#sumBody tr").forEach(tr=>{const e=document.getElementById("v-"+tr.dataset.for); tr.hidden=!e||e.hidden||e.closest("section").hidden;});
+  const anyRow=$$("#sumBody tr").some(tr=>!tr.hidden);
+  $("#sum").hidden = mode!=="cmp" || !anyRow;
+  $("#empty").hidden = shown>0;
+  const cnt=$("#count"); cnt.hidden=!(terms.length||cat!=="all");
+  cnt.textContent = terms.length||cat!=="all" ? `${shown} ${shown===1?"risultato":"risultati"}` : "";
+}
+
+$$("#mode button").forEach(b=>b.addEventListener("click",()=>{
+  mode=b.dataset.v; $$("#mode button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  $$(".cmp-only").forEach(x=>x.hidden=mode!=="cmp"); apply();
+}));
+$$("#cats .chip").forEach(b=>b.addEventListener("click",()=>{
+  cat=b.dataset.c; $$("#cats .chip").forEach(x=>x.setAttribute("aria-pressed",x===b)); apply();
+}));
+$("#q").addEventListener("input",apply);
+apply();
+</script>
+</body>
+</html>
