@@ -3,7 +3,20 @@
     "slug": "impasto-teglia",
     "name": "Impasto in teglia",
     "description": "Calcolatore per pizza in teglia: teglie multiple, stili, lievito in base a tempi e temperature, biga e poolish, temperatura dell'acqua e programma.",
-    "tags": ["cucina", "pizza"],
+    "tags": [
+      "cucina",
+      "pizza"
+    ],
     "emoji": "🍕"
+  },
+  {
+    "slug": "sushi",
+    "name": "Sushi fatto in casa",
+    "description": "Pianificatore per sushi in casa: pezzi per persona, mix di hosomaki, uramaki, nigiri e temaki, riso crudo e acqua, sushi-zu, lista della spesa con nori e pesce abbattuto, e programma fino a tavola.",
+    "tags": [
+      "cucina",
+      "giappone"
+    ],
+    "emoji": "🍣"
   }
 ]
