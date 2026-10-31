@@ -35,10 +35,6 @@ details.params .fields{margin-top:8px;grid-template-columns:repeat(auto-fill,min
 /* risultati */
 .result{position:sticky;top:16px}
 @media (max-width:880px){.result{position:static}}
-.total{background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
-.total .big span{font-size:20px;font-weight:600}
-.total .meta{font-family:var(--f-num);font-size:12px;opacity:.85;text-align:right}
 td.p{text-align:right;font-family:var(--f-num);color:var(--muted);font-size:12.5px}
 td small{display:block;color:var(--muted);font-size:12px}
 tr.sum td{font-weight:600;border-bottom:0}
@@ -133,7 +129,7 @@ tr.grp td{font-family:var(--f-display);font-weight:700;font-size:14px;color:var(
 
     <div class="col result">
       <div class="total">
-        <div><div class="label" style="color:inherit;opacity:.85">Pezzi totali</div><div class="big" id="piecesTot">0<span> pz</span></div></div>
+        <div><div class="label">Pezzi totali</div><div class="big" id="piecesTot">0<span> pz</span></div></div>
         <div class="meta" id="totMeta"></div>
       </div>
 

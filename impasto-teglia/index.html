@@ -17,7 +17,7 @@
 @media (max-width:520px){.pan{grid-template-columns:1fr 1fr;}.pan .shape{grid-column:1/-1}.pan .x{justify-self:end}}
 .pans{display:flex;flex-direction:column;gap:12px}
 .pans .pan+.pan{padding-top:12px;border-top:1px dashed var(--line)}
-.x{width:34px;height:38px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+.x{width:34px;height:38px;border:1px solid var(--ctl-line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
 .x:hover{color:var(--warn);border-color:var(--warn)}
 .x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .phase{display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:center}
@@ -28,10 +28,6 @@
 /* risultati */
 .result{position:sticky;top:16px}
 @media (max-width:880px){.result{position:static}}
-.total{background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
-.total .big span{font-size:20px;font-weight:600}
-.total .meta{font-family:var(--f-num);font-size:12px;opacity:.85;text-align:right}
 td.p{text-align:right;font-family:var(--f-num);color:var(--muted);font-size:12.5px;width:64px}
 tr.sum td{font-weight:600;border-bottom:0}
 .tblwrap{overflow-x:auto}
@@ -128,7 +124,7 @@ tr.sum td{font-weight:600;border-bottom:0}
 
     <div class="col result">
       <div class="total">
-        <div><div class="label" style="color:inherit;opacity:.85">Impasto totale</div><div class="big" id="doughTot">0<span> g</span></div></div>
+        <div><div class="label">Impasto totale</div><div class="big" id="doughTot">0<span> g</span></div></div>
         <div class="meta" id="totMeta"></div>
       </div>
 

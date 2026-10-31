@@ -21,7 +21,7 @@
 .drow .inp input,.drow .inp select{padding:8px 6px;font-size:14px}
 .drow .inp span{padding-right:6px}
 @media (max-width:640px){.drow{grid-template-columns:repeat(3,minmax(0,1fr))}.drow .x{justify-self:end;grid-column:3}}
-.x{width:34px;height:38px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+.x{width:34px;height:38px;border:1px solid var(--ctl-line);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
 .x:hover:not(:disabled){color:var(--warn);border-color:var(--warn)}
 .x:disabled{opacity:.4;cursor:default}
 .x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -50,10 +50,6 @@
 /* risultati */
 .result{position:sticky;top:16px}
 @media (max-width:900px){.result{position:static}}
-.total{background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
-.total .big span{font-size:20px;font-weight:600}
-.total .meta{font-family:var(--f-num);font-size:12px;opacity:.85;text-align:right}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:5px 0;border-bottom:1px solid var(--line)}
 .kv:last-child{border-bottom:0}
 .kv b{font-family:var(--f-num);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
@@ -135,7 +131,7 @@
 
     <div class="col result">
       <div class="total">
-        <div><div class="label" style="color:inherit;opacity:.85" id="selName">Spazio utile</div><div class="big" id="bigUse">0</div></div>
+        <div><div class="label" id="selName">Spazio utile</div><div class="big" id="bigUse">0</div></div>
         <div class="meta" id="totMeta"></div>
       </div>
 

@@ -1,26 +1,33 @@
 /* PandaToolkit: stile condiviso da home e tool.
    Ogni pagina lo include con <link rel="stylesheet" href="../assets/panda.css"> (dalla home: ./assets/panda.css)
    e tiene nel proprio <style> solo il layout specifico. Tema chiaro/scuro segue il sistema,
-   forzabile con <html data-theme="light|dark">. */
+   forzabile con <html data-theme="light|dark">. Lo scuro è pensato per OLED: fondo nero puro,
+   superfici appena sollevate e niente grandi aree chiare (il riquadro .total diventa scuro con testo verde). */
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap");
 
 :root{
   --bg:#f3f5f0; --surface:#ffffff; --sunk:#e8ece3; --line:#d3d9cc;
-  --fg:#1d231b; --muted:#5d6858; --accent:#3f7d3a; --accent-ink:#ffffff; --accent-soft:#dfeedb;
-  --warn:#a3561a; --warn-soft:#f7e6d6;
+  --fg:#1d231b; --muted:#5d6858; --accent:#367032; --accent-ink:#ffffff; --accent-soft:#dfeedb;
+  --warn:#8f4a14; --warn-soft:#f7e6d6;
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
   --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ctl-line:#7f897a;
+  --hero:var(--accent); --hero-ink:var(--accent-ink); --hero-line:var(--accent);
   --r:10px; --wrap:1120px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
-  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
-  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}}
+  --bg:#000000; --surface:#0c0e0c; --sunk:#151815; --line:#2a302a; --ctl-line:#636e60;
+  --fg:#e6ebe3; --muted:#a0ab9b; --accent:#7cc06f; --accent-ink:#000000; --accent-soft:#16261a;
+  --hero:#0f1d11; --hero-ink:#9fd994; --hero-line:#2f4f2c;
+  --warn:#eeac74; --warn-soft:#24180d; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#151916; --surface:#1e2420; --sunk:#262d28; --line:#343d36;
-  --fg:#e7ece4; --muted:#9aa695; --accent:#7cc06f; --accent-ink:#10200e; --accent-soft:#25382a;
-  --warn:#e8a46a; --warn-soft:#3a2a1c; color-scheme:dark}
+  --bg:#000000; --surface:#0c0e0c; --sunk:#151815; --line:#2a302a; --ctl-line:#636e60;
+  --fg:#e6ebe3; --muted:#a0ab9b; --accent:#7cc06f; --accent-ink:#000000; --accent-soft:#16261a;
+  --hero:#0f1d11; --hero-ink:#9fd994; --hero-line:#2f4f2c;
+  --warn:#eeac74; --warn-soft:#24180d; color-scheme:dark}
+
+/* --line è decorativo (separatori), --ctl-line delimita i controlli e sta sopra 3:1 come chiede WCAG 1.4.11 */
 
 /* base */
 *{box-sizing:border-box}
@@ -44,11 +51,18 @@ footer{color:var(--muted);font-size:12.5px;max-width:75ch}
 .warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
 .tag{font:12px var(--f-num);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 
+/* riquadro del risultato principale: <div class="total"><div><div class="label">…</div><div class="big">123<span> g</span></div></div><div class="meta">…</div></div> */
+.total{background:var(--hero);color:var(--hero-ink);border:1px solid var(--hero-line);border-radius:var(--r);padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.total .label{color:inherit}
+.total .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.total .big span{font-size:20px;font-weight:600}
+.total .meta{font-family:var(--f-num);font-size:12px;text-align:right}
+
 /* campi: <div class="field"><label>…</label><div class="inp"><input><span>unità</span></div></div> */
 .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field label{font-size:12.5px;color:var(--muted);font-weight:500}
-.inp{display:flex;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.inp{display:flex;align-items:center;background:var(--sunk);border:1px solid var(--ctl-line);border-radius:8px;overflow:hidden}
 .inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font-family:var(--f-num);font-size:15px;padding:8px 10px;outline:none}
 .inp span{font-family:var(--f-num);font-size:12px;color:var(--muted);padding-right:10px}
@@ -57,10 +71,10 @@ select{appearance:auto}
 
 /* controlli */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1px solid var(--line);background:var(--sunk);color:var(--fg);border-radius:999px;padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
+.chip{border:1px solid var(--ctl-line);background:var(--sunk);color:var(--fg);border-radius:999px;padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn{border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer;align-self:flex-start}
-.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--ctl-line);border-radius:8px;padding:3px;gap:3px;flex-wrap:wrap}
 .seg button{flex:1;border:0;background:transparent;color:var(--muted);font:600 13px var(--f-body);padding:7px 8px;border-radius:6px;cursor:pointer;min-width:max-content}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .chip:focus-visible,.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
